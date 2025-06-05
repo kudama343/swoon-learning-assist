@@ -1,6 +1,6 @@
-
 import { MessageCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import assistIcon from '@/components/assets/assist-icon.png'; // Adjust the path if needed
 
 interface FloatingChatButtonProps {
   isOpen: boolean;
@@ -25,7 +25,11 @@ export const FloatingChatButton = ({ isOpen, onClick }: FloatingChatButtonProps)
           <X className="w-6 h-6 text-white" />
         ) : (
           <div className="relative">
-            <MessageCircle className="w-6 h-6 text-white" />
+            <img
+              src={assistIcon}
+              alt="Swoon Assist"
+              className="w-6 h-6"
+            />
             {/* Notification dot */}
             <div className="absolute -top-1 -right-1 w-3 h-3 bg-swoon-yellow rounded-full animate-pulse" />
           </div>
@@ -35,12 +39,7 @@ export const FloatingChatButton = ({ isOpen, onClick }: FloatingChatButtonProps)
       {/* Swoon Learning Badge */}
       {!isOpen && (
         <div className="absolute bottom-16 right-0 bg-swoon-white rounded-lg shadow-md px-3 py-2 animate-float-in">
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-swoon-blue rounded-sm flex items-center justify-center">
-              <span className="text-white font-bold text-xs">S</span>
-            </div>
-            <span className="text-swoon-black text-sm font-medium">Swoon Assist</span>
-          </div>
+          
           {/* Arrow pointing down */}
           <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-px">
             <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-swoon-white" />

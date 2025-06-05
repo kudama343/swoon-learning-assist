@@ -1,5 +1,5 @@
-
 import { User, ShoppingCart, FileText, Users, Bell } from 'lucide-react';
+import headerIcon from './assets/header-icon.png'; // Adjust the path based on your file structure
 
 export const TopNavigation = () => {
   return (
@@ -8,11 +8,10 @@ export const TopNavigation = () => {
         <div className="flex items-center justify-between">
           {/* Left side - Logo and Company */}
           <div className="flex items-center space-x-4">
-            <div className="w-10 h-10 bg-swoon-white rounded-full flex items-center justify-center">
-              <span className="text-swoon-blue font-bold text-lg">FO</span>
-            </div>
+            
+              <img src={headerIcon} alt="Header Icon" className="w-15 h-6" />
+           
             <div className="text-white">
-              <span className="font-bold text-lg">FRONT OFFICE</span>
               <span className="ml-2 text-sm opacity-90">ACME Company</span>
               <span className="ml-2 text-xs bg-swoon-white/20 px-2 py-1 rounded">v4.0.20</span>
             </div>
