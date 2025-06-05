@@ -1,7 +1,24 @@
 {
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    // Add these essential options for a React project
+    "target": "es2016", // Or a newer target like "es2020", "esnext"
+    "module": "esnext", // Or "commonjs" depending on your module system
+    "jsx": "react-jsx", // <--- Add this line
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["dom", "dom.iterable", "esnext"], // Essential for web projects
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "noEmit": true, // If using a bundler like Webpack/Vite that handles transpilation
+    "resolveJsonModule": true,
+    "isolatedModules": true
+  },
+  "include": ["src"], // Make sure this includes your source files, e.g., "src"
+  "exclude": ["node_modules"] // Exclude node_modules from compilation
 }
