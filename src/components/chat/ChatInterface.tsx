@@ -3,14 +3,17 @@ import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Bot, User } from 'lucide-react';
+import { Send, Bot, User, CheckCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useWorkboard } from '@/hooks/useWorkboard';
+import { useToast } from '@/hooks/use-toast';
 
 interface Message {
   id: string;
   content: string;
   sender: 'user' | 'assistant';
   timestamp: Date;
+  cardCreated?: boolean;
 }
 
 interface ChatInterfaceProps {
@@ -21,7 +24,7 @@ interface ChatInterfaceProps {
 const initialMessages: Message[] = [
   {
     id: '1',
-    content: "Hi Kelly! I'm Swoon Assist, your AI study companion. I can help you create new assignments, check what's due, and organize your workboard. What would you like to work on today?",
+    content: "Hi! I'm Swoon Assist, your AI study companion. I can help you create new assignments, check what's due, and organize your workboard. What would you like to work on today?",
     sender: 'assistant',
     timestamp: new Date()
   }
@@ -32,8 +35,10 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const { createTaskFromMessage, sendChatMessage, getDueSoon, getUrgentTasks } = useWorkboard();
+  const { toast } = useToast();
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
     const newMessage: Message = {
@@ -44,30 +49,69 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
     };
 
     setMessages(prev => [...prev, newMessage]);
+    const currentInput = inputValue;
     setInputValue('');
     setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const responses = [
-        "I'd be happy to help you with that! Let me create a new assignment card for you.",
-        "Based on your current workload, I recommend focusing on your AP Biology lab report since it's due tomorrow.",
-        "Here's what you have coming up this week. Would you like me to help prioritize these tasks?",
-        "Great question! I can help you organize your assignments by due date and importance."
-      ];
-      
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      
+    try {
+      // Check if this is a task creation request
+      const taskCreationKeywords = ['create', 'add', 'new', 'assignment', 'homework', 'due'];
+      const isTaskCreation = taskCreationKeywords.some(keyword => 
+        currentInput.toLowerCase().includes(keyword)
+      );
+
+      let response: string;
+      let cardCreated = false;
+
+      if (isTaskCreation) {
+        const result = await createTaskFromMessage(currentInput);
+        response = result.message;
+        cardCreated = result.success;
+        
+        if (result.success) {
+          toast({
+            title: "Task Created!",
+            description: `Added "${result.card?.title}" to ${result.card?.subject}`,
+          });
+        }
+      } else {
+        // Handle information queries
+        if (currentInput.toLowerCase().includes('due') && currentInput.toLowerCase().includes('week')) {
+          const dueSoon = getDueSoon();
+          response = dueSoon.length > 0 
+            ? `Here's what's due this week:\n${dueSoon.map(card => `• ${card.title} (${card.subject}) - Due ${card.dueDate.toLocaleDateString()}`).join('\n')}`
+            : "You don't have any assignments due this week. Great job staying ahead!";
+        } else if (currentInput.toLowerCase().includes('urgent') || currentInput.toLowerCase().includes('first')) {
+          const urgent = getUrgentTasks();
+          response = urgent.length > 0
+            ? `Here are your most urgent tasks:\n${urgent.map(card => `🚨 ${card.title} (${card.subject}) - Due ${card.dueDate.toLocaleDateString()}`).join('\n')}\n\nI recommend starting with the earliest due date!`
+            : "No urgent tasks right now! You're all caught up.";
+        } else {
+          response = await sendChatMessage(currentInput);
+        }
+      }
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: randomResponse,
+        content: response,
         sender: 'assistant',
-        timestamp: new Date()
+        timestamp: new Date(),
+        cardCreated
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "I'm having trouble right now. Please try again in a moment!",
+        sender: 'assistant',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -86,7 +130,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-24 right-6 w-96 h-[500px] z-40 animate-slide-up">
+    <div className="fixed bottom-4 right-4 md:bottom-24 md:right-6 w-[calc(100vw-2rem)] md:w-96 h-[calc(100vh-2rem)] md:h-[500px] z-40 animate-slide-up">
       <Card className="bg-swoon-white border border-swoon-mid-gray shadow-xl h-full flex flex-col">
         {/* Header */}
         <div className="bg-swoon-blue text-white p-4 rounded-t-lg">
@@ -136,13 +180,19 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
                 </div>
                 
                 <div className={`
-                  max-w-[80%] p-3 rounded-lg text-sm
+                  max-w-[80%] p-3 rounded-lg text-sm relative
                   ${message.sender === 'user'
                     ? 'bg-swoon-yellow text-swoon-black'
                     : 'bg-swoon-light-blue text-swoon-black'
                   }
                 `}>
                   {message.content}
+                  {message.cardCreated && (
+                    <div className="flex items-center mt-2 text-swoon-blue">
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      <span className="text-xs font-medium">Card created!</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -179,7 +229,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
               onClick={handleSendMessage}
               className="bg-swoon-blue hover:bg-swoon-bluer"
               size="icon"
-              disabled={!inputValue.trim()}
+              disabled={!inputValue.trim() || isTyping}
             >
               <Send className="w-4 h-4" />
             </Button>
