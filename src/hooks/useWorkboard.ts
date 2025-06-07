@@ -32,23 +32,34 @@ export const useWorkboard = () => {
   const [cerebrasService] = useState(() => new CerebrasService('csk-ckx4c5rfw9f4y6fdrtn5fyc564xcvvyynyfjvet3nvxcj6hj'));
 
   const moveColumnToFront = useCallback((subject: string) => {
+    console.log('Moving column to front:', subject);
     setColumnOrder(prev => {
       const filtered = prev.filter(col => col !== subject);
-      return [subject, ...filtered];
+      const newOrder = [subject, ...filtered];
+      console.log('New column order:', newOrder);
+      return newOrder;
     });
   }, []);
 
   const addCard = useCallback((card: Omit<WorkboardCard, 'id'>) => {
+    console.log('Adding card:', card);
+    
     const newCard: WorkboardCard = {
       ...card,
       id: Date.now().toString(),
       isNewCard: true,
     };
 
-    setCards(prev => ({
-      ...prev,
-      [card.subject]: [...(prev[card.subject] || []), newCard],
-    }));
+    console.log('New card created:', newCard);
+
+    setCards(prev => {
+      const updated = {
+        ...prev,
+        [card.subject]: [...(prev[card.subject] || []), newCard],
+      };
+      console.log('Updated cards state:', updated);
+      return updated;
+    });
 
     // Move the column with the new card to the front
     moveColumnToFront(card.subject);
@@ -58,6 +69,7 @@ export const useWorkboard = () => {
 
     // Auto-clear highlight after 5 seconds
     setTimeout(() => {
+      console.log('Clearing highlight for card:', newCard.id);
       setHighlightedCard(null);
       setCards(prev => {
         const updated = { ...prev };
@@ -87,10 +99,14 @@ export const useWorkboard = () => {
   }, []);
 
   const createTaskFromMessage = useCallback(async (message: string) => {
+    console.log('Creating task from message:', message);
+    
     const result = await cerebrasService.createTask(message);
+    console.log('Cerebras result:', result);
     
     if (result.success && result.card) {
       const newCard = addCard(result.card);
+      console.log('Card added successfully:', newCard);
       return { success: true, card: newCard, message: result.message };
     }
     

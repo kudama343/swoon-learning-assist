@@ -64,7 +64,10 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
       let cardCreated = false;
 
       if (isTaskCreation) {
+        console.log('Detected task creation request:', currentInput);
         const result = await createTaskFromMessage(currentInput);
+        console.log('Task creation result:', result);
+        
         response = result.message;
         cardCreated = result.success;
         
@@ -77,6 +80,8 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
           
           // Enhanced response for successful task creation
           response = `Perfect! I've created "${result.card?.title}" and added it to your ${result.card?.subject} column. The card is now glowing to help you spot it easily, and I've moved that column to the front for better visibility. The highlight will automatically fade after 5 seconds.`;
+        } else {
+          console.log('Task creation failed:', result.message);
         }
       } else {
         // Handle information queries

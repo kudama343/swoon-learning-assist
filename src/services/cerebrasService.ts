@@ -44,7 +44,7 @@ CAPABILITIES:
 2. Parse dates (today, tomorrow, next Friday, in 2 weeks, etc.)
 3. Detect subject from context - be very specific about matching these exact subjects:
    - "Core Math" for any math-related tasks
-   - "AP American Literature" for literature, English, writing tasks
+   - "AP American Literature" for literature, English, writing tasks  
    - "AP Biology" for biology, science tasks
 
 RESPONSE FORMAT for task creation:
@@ -53,19 +53,19 @@ When creating a task, respond with JSON:
   "action": "create_task",
   "task": {
     "title": "Assignment title",
-    "subject": "Core Math|AP American Literature|AP Biology",
+    "subject": "Core Math|AP American Literature|AP Biology", 
     "type": "Assignment|Homework|Lab Report|Test",
     "dueDate": "YYYY-MM-DD",
-    "tags": ["optional", "tags"]
+    "tags": ["Homework"]
   },
-  "message": "Friendly confirmation message"
+  "message": "Task created successfully!"
 }
 
 SUBJECT DETECTION RULES:
-- If user mentions "math", "algebra", "calculus", "geometry" → "Core Math"
-- If user mentions "literature", "english", "writing", "essay" → "AP American Literature"  
-- If user mentions "biology", "science", "lab", "cells" → "AP Biology"
-- If user specifies exact subject name, use that exactly
+- If user mentions "math", "algebra", "calculus", "geometry", "Core Math" → "Core Math"
+- If user mentions "literature", "english", "writing", "essay", "AP American Literature" → "AP American Literature"  
+- If user mentions "biology", "science", "lab", "cells", "AP Biology" → "AP Biology"
+- Default to "Core Math" if subject is unclear
 
 For general questions, respond naturally without JSON.
 
@@ -113,38 +113,45 @@ Current date: ${new Date().toISOString().split('T')[0]}`;
   async createTask(userMessage: string): Promise<TaskCreationResult> {
     try {
       const response = await this.sendMessage(`Create a task: ${userMessage}`);
+      console.log('Cerebras response:', response);
       
       // Try to parse JSON response for task creation
       if (response.includes('"action": "create_task"')) {
         const jsonMatch = response.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
+          console.log('Parsed task:', parsed);
           
           // Ensure subject is one of the valid ones
           const validSubjects = ['Core Math', 'AP American Literature', 'AP Biology'];
           let subject = parsed.task.subject;
           
           if (!validSubjects.includes(subject)) {
-            // Fallback subject detection
+            // Fallback subject detection based on user message
             const lowerMessage = userMessage.toLowerCase();
-            if (lowerMessage.includes('math') || lowerMessage.includes('algebra') || lowerMessage.includes('calculus')) {
+            if (lowerMessage.includes('math') || lowerMessage.includes('algebra') || lowerMessage.includes('calculus') || lowerMessage.includes('core math')) {
               subject = 'Core Math';
-            } else if (lowerMessage.includes('literature') || lowerMessage.includes('english') || lowerMessage.includes('writing')) {
+            } else if (lowerMessage.includes('literature') || lowerMessage.includes('english') || lowerMessage.includes('writing') || lowerMessage.includes('ap american literature')) {
               subject = 'AP American Literature';
-            } else if (lowerMessage.includes('biology') || lowerMessage.includes('science') || lowerMessage.includes('lab')) {
+            } else if (lowerMessage.includes('biology') || lowerMessage.includes('science') || lowerMessage.includes('lab') || lowerMessage.includes('ap biology')) {
               subject = 'AP Biology';
             } else {
               subject = 'Core Math'; // default
             }
           }
 
+          const finalCard = {
+            ...parsed.task,
+            subject,
+            dueDate: new Date(parsed.task.dueDate),
+            tags: parsed.task.tags || ['Homework']
+          };
+
+          console.log('Final card to be created:', finalCard);
+
           return {
             success: true,
-            card: {
-              ...parsed.task,
-              subject,
-              dueDate: new Date(parsed.task.dueDate),
-            },
+            card: finalCard,
             message: parsed.message,
           };
         }
@@ -161,32 +168,5 @@ Current date: ${new Date().toISOString().split('T')[0]}`;
         message: 'I had trouble creating that task. Could you try rephrasing your request?',
       };
     }
-  }
-
-  parseDueDate(dateString: string): Date {
-    const today = new Date();
-    const lowerDate = dateString.toLowerCase();
-
-    if (lowerDate.includes('today')) {
-      return today;
-    }
-    
-    if (lowerDate.includes('tomorrow')) {
-      const tomorrow = new Date(today);
-      tomorrow.setDate(today.getDate() + 1);
-      return tomorrow;
-    }
-
-    if (lowerDate.includes('next friday')) {
-      const nextFriday = new Date(today);
-      const daysUntilFriday = (5 - today.getDay() + 7) % 7 || 7;
-      nextFriday.setDate(today.getDate() + daysUntilFriday);
-      return nextFriday;
-    }
-
-    // Default to tomorrow if parsing fails
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-    return tomorrow;
   }
 }
