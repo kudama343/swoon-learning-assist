@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, MoreHorizontal, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { useWorkboard } from '@/hooks/useWorkboard';
 
 interface WorkboardCardProps {
   card: {
@@ -14,12 +15,21 @@ interface WorkboardCardProps {
     tags?: string[];
     score?: string;
     isDue?: boolean;
+    isNewCard?: boolean;
   };
 }
 
 export const WorkboardCard = ({ card }: WorkboardCardProps) => {
+  const { highlightedCard } = useWorkboard() as any;
+  const isHighlighted = highlightedCard === card.id;
+
   return (
-    <Card className="bg-swoon-white border border-swoon-mid-gray hover:shadow-md transition-shadow cursor-pointer">
+    <Card 
+      className={`
+        bg-swoon-white border border-swoon-mid-gray hover:shadow-md transition-all cursor-pointer
+        ${isHighlighted ? 'animate-pulse shadow-2xl ring-4 ring-swoon-blue z-40 relative' : ''}
+      `}
+    >
       <div className="p-3 space-y-3">
         {/* Card Title */}
         <h4 className="font-medium text-swoon-black text-sm leading-5">{card.title}</h4>
