@@ -30,13 +30,45 @@ const initialMessages: Message[] = [
   }
 ];
 
+const STORAGE_KEY = 'swoon-chat-history';
+
+const saveChatHistory = (messages: Message[]) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+  } catch (error) {
+    console.error('Failed to save chat history:', error);
+  }
+};
+
+const loadChatHistory = (): Message[] => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Convert timestamp strings back to Date objects
+      return parsed.map((msg: any) => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp)
+      }));
+    }
+  } catch (error) {
+    console.error('Failed to load chat history:', error);
+  }
+  return initialMessages;
+};
+
 export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [messages, setMessages] = useState<Message[]>(() => loadChatHistory());
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { createTaskFromMessage, sendChatMessage, getDueSoon, getUrgentTasks } = useWorkboard();
   const { toast } = useToast();
+
+  // Save messages to localStorage whenever messages change
+  useEffect(() => {
+    saveChatHistory(messages);
+  }, [messages]);
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
@@ -55,7 +87,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
 
     try {
       // Check if this is a task creation request
-      const taskCreationKeywords = ['create', 'add', 'new', 'assignment', 'homework', 'due', 'task'];
+      const taskCreationKeywords = ['create', 'add', 'new', 'assignment', 'homework', 'due', 'task', 'test', 'quiz', 'project'];
       const isTaskCreation = taskCreationKeywords.some(keyword => 
         currentInput.toLowerCase().includes(keyword)
       );
@@ -79,9 +111,10 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
           });
           
           // Enhanced response for successful task creation
-          response = `Perfect! I've created "${result.card?.title}" and added it to your ${result.card?.subject} column. The card is now glowing to help you spot it easily, and I've moved that column to the front for better visibility. The highlight will automatically fade after 5 seconds.`;
+          response = `Perfect! I've created "${result.card?.title}" and added it to your ${result.card?.subject} column. The card is now glowing to help you spot it easily, and I've moved that column to the front for better visibility.`;
         } else {
-          console.log('Task creation failed:', result.message);
+          console.log('Task creation failed or needs more info:', result.message);
+          // If more info is needed, the AI will ask for it in the response
         }
       } else {
         // Handle information queries

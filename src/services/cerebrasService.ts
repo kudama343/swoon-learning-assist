@@ -12,6 +12,7 @@ interface CerebrasResponse {
   }>;
 }
 
+
 interface TaskCreationResult {
   success: boolean;
   card?: {
@@ -22,6 +23,7 @@ interface TaskCreationResult {
     tags?: string[];
   };
   message: string;
+  needsMoreInfo?: boolean;
 }
 
 export class CerebrasService {
@@ -29,51 +31,101 @@ export class CerebrasService {
   private apiUrl = 'https://api.cerebras.ai/v1/chat/completions';
   private conversationHistory: Message[] = [];
 
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
+  constructor() {
+    this.apiKey = import.meta.env.VITE_CEREBRAS_API_KEY;
+    if (!this.apiKey) {
+      throw new Error('VITE_CEREBRAS_API_KEY environment variable is required');
+    }
     this.initializeContext();
   }
 
   private initializeContext() {
-    const systemPrompt = `You are Swoon Assist, an AI study companion for students. You help manage their workboard tasks and assignments.
+    const today = new Date();
+    const currentDate = today.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
 
-AVAILABLE SUBJECTS: Core Math, AP American Literature, AP Biology
+    const systemPrompt = `You are Swoon Assist, an AI study companion that helps students create assignment cards for their workboard.
 
-CAPABILITIES:
-1. Create assignment cards with natural language
-2. Parse dates (today, tomorrow, next Friday, in 2 weeks, etc.)
-3. Detect subject from context - be very specific about matching these exact subjects:
-   - "Core Math" for any math-related tasks
-   - "AP American Literature" for literature, English, writing tasks  
-   - "AP Biology" for biology, science tasks
+CURRENT DATE: ${currentDate}
 
-RESPONSE FORMAT for task creation:
-When creating a task, respond with JSON:
-{
-  "action": "create_task",
-  "task": {
-    "title": "Assignment title",
-    "subject": "Core Math|AP American Literature|AP Biology", 
-    "type": "Assignment|Homework|Lab Report|Test",
-    "dueDate": "YYYY-MM-DD",
-    "tags": ["Homework"]
-  },
-  "message": "Task created successfully!"
-}
+AVAILABLE COLUMNS: Core Math, AP American Literature, AP Biology
+AVAILABLE TYPES: Assignment, Homework, Test, Quiz, Project, Lab Report
 
-SUBJECT DETECTION RULES:
-- If user mentions "math", "algebra", "calculus", "geometry", "Core Math" → "Core Math"
-- If user mentions "literature", "english", "writing", "essay", "AP American Literature" → "AP American Literature"  
-- If user mentions "biology", "science", "lab", "cells", "AP Biology" → "AP Biology"
-- Default to "Core Math" if subject is unclear
+YOUR TASK: Parse user messages to create assignment cards. You must ALWAYS respond in valid JSON format.
 
-For general questions, respond naturally without JSON.
+RESPONSE RULES:
+1. If ANY required information is missing (Title, Column, Due Date, Type), ask for the missing information and return:
+   {
+     "needsMoreInfo": true,
+     "message": "I need more information. What [missing info] would you like for this task?"
+   }
 
-Current date: ${new Date().toISOString().split('T')[0]}`;
+2. If ALL information is provided or can be inferred, return:
+   {
+     "Title": "generated or provided title",
+     "Column": "Core Math|AP American Literature|AP Biology",
+     "Due Date": "Day, Month Date" (e.g., "Friday, May 17th"),
+     "Type": "Assignment|Homework|Test|Quiz|Project|Lab Report"
+   }
+
+DATE PARSING:
+- "today" → ${today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+- "tomorrow" → ${new Date(today.getTime() + 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+- "next Friday" → calculate the next Friday date
+- "in 2 weeks" → calculate date 2 weeks from today
+- Specific dates should be formatted as "Day, Month Date"
+
+COLUMN DETECTION:
+- Math-related keywords → "Core Math"
+- Literature/English/Writing keywords → "AP American Literature"  
+- Biology/Science keywords → "AP Biology"
+
+TITLE GENERATION:
+- If user doesn't provide a title, generate a descriptive one based on the type and subject
+- If user provides a title, use it exactly
+
+You must ALWAYS return valid JSON. Never include explanatory text outside the JSON.`;
 
     this.conversationHistory = [
       { role: 'system', content: systemPrompt }
     ];
+  }
+
+  private parseDate(dateString: string): Date {
+    const today = new Date();
+    const lowerDate = dateString.toLowerCase();
+
+    if (lowerDate === 'today') {
+      return today;
+    }
+    
+    if (lowerDate === 'tomorrow') {
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+      return tomorrow;
+    }
+
+    if (lowerDate.includes('next friday')) {
+      const nextFriday = new Date(today);
+      const daysUntilFriday = (5 - today.getDay() + 7) % 7 || 7;
+      nextFriday.setDate(today.getDate() + daysUntilFriday);
+      return nextFriday;
+    }
+
+    if (lowerDate.includes('week')) {
+      const weeks = parseInt(lowerDate.match(/\d+/)?.[0] || '1');
+      const futureDate = new Date(today);
+      futureDate.setDate(today.getDate() + (weeks * 7));
+      return futureDate;
+    }
+
+    // Try to parse other date formats
+    const parsed = new Date(dateString);
+    return isNaN(parsed.getTime()) ? today : parsed;
   }
 
   async sendMessage(userMessage: string, workboardState?: any): Promise<string> {
@@ -87,10 +139,10 @@ Current date: ${new Date().toISOString().split('T')[0]}`;
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama3.1-8b',
+          model: 'llama-3.3-70b',
           messages: this.conversationHistory,
           max_tokens: 500,
-          temperature: 0.7,
+          temperature: 0.3,
         }),
       });
 
@@ -112,54 +164,56 @@ Current date: ${new Date().toISOString().split('T')[0]}`;
 
   async createTask(userMessage: string): Promise<TaskCreationResult> {
     try {
-      const response = await this.sendMessage(`Create a task: ${userMessage}`);
+      const response = await this.sendMessage(`Create assignment card: ${userMessage}`);
       console.log('Cerebras response:', response);
       
-      // Try to parse JSON response for task creation
-      if (response.includes('"action": "create_task"')) {
-        const jsonMatch = response.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          console.log('Parsed task:', parsed);
-          
-          // Ensure subject is one of the valid ones
-          const validSubjects = ['Core Math', 'AP American Literature', 'AP Biology'];
-          let subject = parsed.task.subject;
-          
-          if (!validSubjects.includes(subject)) {
-            // Fallback subject detection based on user message
-            const lowerMessage = userMessage.toLowerCase();
-            if (lowerMessage.includes('math') || lowerMessage.includes('algebra') || lowerMessage.includes('calculus') || lowerMessage.includes('core math')) {
-              subject = 'Core Math';
-            } else if (lowerMessage.includes('literature') || lowerMessage.includes('english') || lowerMessage.includes('writing') || lowerMessage.includes('ap american literature')) {
-              subject = 'AP American Literature';
-            } else if (lowerMessage.includes('biology') || lowerMessage.includes('science') || lowerMessage.includes('lab') || lowerMessage.includes('ap biology')) {
-              subject = 'AP Biology';
-            } else {
-              subject = 'Core Math'; // default
-            }
-          }
-
-          const finalCard = {
-            ...parsed.task,
-            subject,
-            dueDate: new Date(parsed.task.dueDate),
-            tags: parsed.task.tags || ['Homework']
-          };
-
-          console.log('Final card to be created:', finalCard);
-
-          return {
-            success: true,
-            card: finalCard,
-            message: parsed.message,
-          };
-        }
+      // Extract JSON from response
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        return {
+          success: false,
+          message: 'I had trouble understanding your request. Please try again.',
+        };
       }
 
+      const parsed = JSON.parse(jsonMatch[0]);
+      console.log('Parsed response:', parsed);
+      
+      // Check if more information is needed
+      if (parsed.needsMoreInfo) {
+        return {
+          success: false,
+          message: parsed.message,
+          needsMoreInfo: true,
+        };
+      }
+
+      // Validate required fields
+      if (!parsed.Title || !parsed.Column || !parsed['Due Date'] || !parsed.Type) {
+        return {
+          success: false,
+          message: 'I need more information to create this task. Please provide the title, subject, due date, and type.',
+          needsMoreInfo: true,
+        };
+      }
+
+      // Parse the due date
+      const dueDate = this.parseDate(parsed['Due Date']);
+
+      const finalCard = {
+        title: parsed.Title,
+        subject: parsed.Column,
+        type: parsed.Type,
+        dueDate: dueDate,
+        tags: [parsed.Type]
+      };
+
+      console.log('Final card to be created:', finalCard);
+
       return {
-        success: false,
-        message: response,
+        success: true,
+        card: finalCard,
+        message: `Perfect! I've created "${parsed.Title}" for ${parsed.Column}, due ${parsed['Due Date']}.`,
       };
     } catch (error) {
       console.error('Task creation error:', error);

@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { CerebrasService } from '@/services/cerebrasService';
 
@@ -37,7 +36,7 @@ export const useWorkboard = () => {
 
   const [highlightedCard, setHighlightedCard] = useState<string | null>(null);
 
-  const [cerebrasService] = useState(() => new CerebrasService('csk-ckx4c5rfw9f4y6fdrtn5fyc564xcvvyynyfjvet3nvxcj6hj'));
+  const [cerebrasService] = useState(() => new CerebrasService());
 
   const moveColumnToFront = useCallback((subject: string) => {
     console.log('Moving column to front:', subject);
@@ -50,47 +49,47 @@ export const useWorkboard = () => {
   }, []);
 
   const addCard = useCallback((card: Omit<WorkboardCard, 'id'>) => {
-  console.log('Adding card:', card);
-  
-  const newCard: WorkboardCard = {
-    ...card,
-    id: Date.now().toString(),
-    isNewCard: true,
-    tags: [card.type, ...(card.tags || [])], // Add type to tags array
-  };
-
-  console.log('New card created:', newCard);
-
-  setCards(prev => {
-    const updated = {
-      ...prev,
-      [card.subject]: [...(prev[card.subject] || []), newCard],
+    console.log('Adding card:', card);
+    
+    const newCard: WorkboardCard = {
+      ...card,
+      id: Date.now().toString(),
+      isNewCard: true,
+      tags: [card.type, ...(card.tags || [])], // Add type to tags array
     };
-    console.log('Updated cards state:', updated);
-    return updated;
-  });
 
-  // Move the column with the new card to the front
-  moveColumnToFront(card.subject);
+    console.log('New card created:', newCard);
 
-  // Set the highlighted card
-  setHighlightedCard(newCard.id);
-
-  // Auto-clear highlight after 5 seconds
-  setTimeout(() => {
-    console.log('Clearing highlight for card:', newCard.id);
-    setHighlightedCard(null);
     setCards(prev => {
-      const updated = { ...prev };
-      updated[card.subject] = updated[card.subject].map(c => 
-        c.id === newCard.id ? { ...c, isNewCard: false } : c
-      );
+      const updated = {
+        ...prev,
+        [card.subject]: [...(prev[card.subject] || []), newCard],
+      };
+      console.log('Updated cards state:', updated);
       return updated;
     });
-  }, 5000);
 
-  return newCard;
-}, [moveColumnToFront]);
+    // Move the column with the new card to the front
+    moveColumnToFront(card.subject);
+
+    // Set the highlighted card
+    setHighlightedCard(newCard.id);
+
+    // Auto-clear highlight after 5 seconds
+    setTimeout(() => {
+      console.log('Clearing highlight for card:', newCard.id);
+      setHighlightedCard(null);
+      setCards(prev => {
+        const updated = { ...prev };
+        updated[card.subject] = updated[card.subject].map(c => 
+          c.id === newCard.id ? { ...c, isNewCard: false } : c
+        );
+        return updated;
+      });
+    }, 5000);
+
+    return newCard;
+  }, [moveColumnToFront]);
 
   const clearHighlight = useCallback(() => {
     setHighlightedCard(null);
@@ -119,7 +118,11 @@ export const useWorkboard = () => {
       return { success: true, card: newCard, message: result.message };
     }
     
-    return { success: false, message: result.message };
+    return { 
+      success: false, 
+      message: result.message,
+      needsMoreInfo: result.needsMoreInfo 
+    };
   }, [addCard, cerebrasService]);
 
   const sendChatMessage = useCallback(async (message: string) => {
