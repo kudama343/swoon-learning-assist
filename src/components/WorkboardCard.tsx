@@ -26,25 +26,27 @@ export const WorkboardCard = ({ card }: WorkboardCardProps) => {
   return (
     <Card 
       className={`
-        bg-swoon-white border border-swoon-mid-gray hover:shadow-md transition-all cursor-pointer
-        ${isHighlighted ? 'animate-pulse border-swoon-blue border-2 shadow-2xl shadow-swoon-blue/50 ring-4 ring-swoon-blue/30' : ''}
-        ${card.isNewCard ? 'animate-pulse border-swoon-blue border-2 shadow-2xl shadow-swoon-blue/50 ring-4 ring-swoon-blue/30' : ''}
+        bg-swoon-white border border-swoon-mid-gray hover:shadow-lg transition-all duration-300 cursor-pointer group
+        ${isHighlighted ? 'animate-pulse border-swoon-blue border-2 shadow-2xl shadow-swoon-blue/50 ring-4 ring-swoon-blue/30 scale-105' : 'hover:scale-102'}
+        ${card.isNewCard ? 'animate-pulse border-swoon-blue border-2 shadow-2xl shadow-swoon-blue/50 ring-4 ring-swoon-blue/30 scale-105' : ''}
       `}
     >
-      <div className="p-3 space-y-3">
+      <div className="p-4 space-y-3">
         {/* Card Title */}
-        <h4 className="font-medium text-swoon-black text-sm leading-5">{card.title}</h4>
+        <h4 className="font-medium text-swoon-black text-sm lg:text-base leading-relaxed group-hover:text-swoon-blue transition-colors">
+          {card.title}
+        </h4>
         
         {/* Tags */}
         {card.tags && (
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-2">
             {card.tags.map((tag, index) => (
               <Badge 
                 key={index}
-                className={`text-xs px-2 py-1 ${
+                className={`text-xs px-3 py-1 font-medium rounded-full ${
                   tag === 'Homework' 
-                    ? 'bg-swoon-green text-white' 
-                    : 'bg-swoon-blue text-white'
+                    ? 'bg-swoon-green/10 text-swoon-green border border-swoon-green/20' 
+                    : 'bg-swoon-blue/10 text-swoon-blue border border-swoon-blue/20'
                 }`}
               >
                 {tag}
@@ -53,21 +55,21 @@ export const WorkboardCard = ({ card }: WorkboardCardProps) => {
           </div>
         )}
         
-        {/* Due Date and Score */}
+        {/* Due Date and Actions */}
         <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center space-x-1">
-            {card.isDue && <AlertCircle className="w-3 h-3 text-swoon-red" />}
-            <Clock className="w-3 h-3 text-swoon-dark-gray" />
-            <span className="text-swoon-dark-gray">{format(card.dueDate, 'MMM d')}</span>
+          <div className="flex items-center space-x-2">
+            {card.isDue && <AlertCircle className="w-4 h-4 text-swoon-red" />}
+            <Clock className="w-4 h-4 text-swoon-dark-gray" />
+            <span className="text-swoon-dark-gray font-medium">{format(card.dueDate, 'MMM d')}</span>
           </div>
           
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             {card.score && (
-              <span className="text-swoon-dark-gray">{card.score}</span>
+              <span className="text-swoon-dark-gray font-medium">{card.score}</span>
             )}
-            <MoreHorizontal className="w-3 h-3 text-swoon-dark-gray cursor-pointer hover:text-swoon-black" />
-            <div className="w-6 h-6 bg-swoon-blue rounded-full flex items-center justify-center">
-              <span className="text-white text-xs">i</span>
+            <MoreHorizontal className="w-4 h-4 text-swoon-dark-gray cursor-pointer hover:text-swoon-blue transition-colors" />
+            <div className="w-6 h-6 bg-gradient-to-br from-swoon-blue to-swoon-bluer rounded-full flex items-center justify-center shadow-sm">
+              <span className="text-white text-xs font-semibold">i</span>
             </div>
           </div>
         </div>

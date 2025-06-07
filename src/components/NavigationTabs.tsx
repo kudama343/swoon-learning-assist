@@ -18,9 +18,9 @@ const tabs = [
 
 export const NavigationTabs = ({ activeTab, onTabClick }: NavigationTabsProps) => {
   return (
-    <div className="bg-swoon-white border-b border-swoon-mid-gray overflow-x-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex space-x-4 md:space-x-8 min-w-max md:min-w-0">
+    <div className="bg-swoon-white border-b border-swoon-mid-gray overflow-x-auto shadow-sm">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+        <div className="flex space-x-2 sm:space-x-4 md:space-x-8 min-w-max md:min-w-0">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -30,15 +30,15 @@ export const NavigationTabs = ({ activeTab, onTabClick }: NavigationTabsProps) =
                 key={tab.id}
                 onClick={() => onTabClick(tab.id)}
                 className={`
-                  flex flex-col items-center py-3 md:py-4 px-2 border-b-2 transition-colors whitespace-nowrap
+                  flex flex-col items-center py-3 px-3 sm:px-4 border-b-2 transition-all duration-200 whitespace-nowrap group
                   ${isActive 
-                    ? 'border-swoon-blue text-swoon-blue' 
-                    : 'border-transparent text-swoon-dark-gray hover:text-swoon-black hover:border-swoon-mid-gray'
+                    ? 'border-swoon-blue text-swoon-blue bg-swoon-light-blue/20' 
+                    : 'border-transparent text-swoon-dark-gray hover:text-swoon-blue hover:border-swoon-blue/50 hover:bg-swoon-light-blue/10'
                   }
                 `}
               >
-                <Icon className="w-4 h-4 md:w-5 md:h-5 mb-1" />
-                <span className="text-xs md:text-sm font-medium">{tab.label}</span>
+                <Icon className={`w-4 h-4 sm:w-5 sm:h-5 mb-1 transition-transform ${isActive ? 'scale-110' : 'group-hover:scale-105'}`} />
+                <span className="text-xs sm:text-sm font-medium">{tab.label}</span>
               </button>
             );
           })}

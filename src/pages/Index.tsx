@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Workboard } from '@/components/Workboard';
 import { FloatingChatButton } from '@/components/chat/FloatingChatButton';
@@ -30,15 +31,19 @@ const Index = () => {
       {/* Top Navigation */}
       <TopNavigation />
 
-      {/* User Profile Section */}
-      <UserProfile />
+      {/* User Profile Section - Hidden on mobile, shown on tablet+ */}
+      <div className="hidden md:block">
+        <UserProfile />
+      </div>
 
       {/* Navigation Tabs */}
       <NavigationTabs activeTab={activeTab} onTabClick={handleTabClick} />
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === 'workboard' && <Workboard />}
+      <main className="px-2 sm:px-4 lg:px-8 py-3 sm:py-6 max-w-full overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          {activeTab === 'workboard' && <Workboard />}
+        </div>
       </main>
 
       {/* Chat Interface */}
