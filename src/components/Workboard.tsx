@@ -11,7 +11,7 @@ export const Workboard = () => {
         <WorkboardColumn
           key={column}
           title={column}
-          cards={cards[column] || []}
+          
         />
       ))}
     </div>

@@ -78,6 +78,10 @@ export default {
 				sm: 'calc(var(--radius) - 4px)'
 			},
 			keyframes: {
+				'slowpulse': {
+					'0%, 100%': { opacity: '1' },
+					'50%': { opacity: '0.5' },
+				},
 				'accordion-down': {
 					from: {
 						height: '0'
@@ -119,7 +123,8 @@ export default {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'float-in': 'float-in 0.3s ease-out',
-				'slide-up': 'slide-up 0.4s ease-out'
+				'slide-up': 'slide-up 0.4s ease-out',
+				'slowpulse': 'slowpulse 2s ease-in-out 3',
 			}
 		}
 	},

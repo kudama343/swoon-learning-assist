@@ -19,7 +19,7 @@ export const TopNavigation = () => {
               <Menu className="w-5 h-5" />
             </button>
             
-            <img src={headerIcon} alt="Header Icon" className="w-12 sm:w-15 h-5 sm:h-6" />
+            <img src={headerIcon} alt="Header Icon" className="w-15 sm:w-15 h-5 sm:h-6" />
             
             <div className="text-white">
               <span className="ml-1 sm:ml-2 text-xs sm:text-sm opacity-90">ACME Company</span>

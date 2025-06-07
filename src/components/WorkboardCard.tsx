@@ -1,4 +1,3 @@
-
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, MoreHorizontal, AlertCircle } from 'lucide-react';
@@ -23,12 +22,13 @@ export const WorkboardCard = ({ card }: WorkboardCardProps) => {
   const { highlightedCard } = useWorkboard();
   const isHighlighted = highlightedCard === card.id;
 
+  const shouldAnimate = isHighlighted || card.isNewCard;
+
   return (
     <Card 
       className={`
         bg-swoon-white border border-swoon-mid-gray hover:shadow-lg transition-all duration-300 cursor-pointer group
-        ${isHighlighted ? 'animate-pulse border-swoon-blue border-2 shadow-2xl shadow-swoon-blue/50 ring-4 ring-swoon-blue/30 scale-105' : 'hover:scale-102'}
-        ${card.isNewCard ? 'animate-pulse border-swoon-blue border-2 shadow-2xl shadow-swoon-blue/50 ring-4 ring-swoon-blue/30 scale-105' : ''}
+        ${shouldAnimate ? 'animate-slowpulse border-swoon-blue border-2 shadow-2xl shadow-swoon-blue/50 ring-4 ring-swoon-blue/30 scale-105' : 'hover:scale-102'}
       `}
     >
       <div className="p-4 space-y-3">
@@ -36,7 +36,7 @@ export const WorkboardCard = ({ card }: WorkboardCardProps) => {
         <h4 className="font-medium text-swoon-black text-sm lg:text-base leading-relaxed group-hover:text-swoon-blue transition-colors">
           {card.title}
         </h4>
-        
+
         {/* Tags */}
         {card.tags && (
           <div className="flex flex-wrap gap-2">
@@ -54,7 +54,7 @@ export const WorkboardCard = ({ card }: WorkboardCardProps) => {
             ))}
           </div>
         )}
-        
+
         {/* Due Date and Actions */}
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center space-x-2">
@@ -62,7 +62,7 @@ export const WorkboardCard = ({ card }: WorkboardCardProps) => {
             <Clock className="w-4 h-4 text-swoon-dark-gray" />
             <span className="text-swoon-dark-gray font-medium">{format(card.dueDate, 'MMM d')}</span>
           </div>
-          
+
           <div className="flex items-center space-x-3">
             {card.score && (
               <span className="text-swoon-dark-gray font-medium">{card.score}</span>
