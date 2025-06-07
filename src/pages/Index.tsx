@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Workboard } from '@/components/Workboard';
 import { FloatingChatButton } from '@/components/chat/FloatingChatButton';
@@ -8,6 +7,7 @@ import { NavigationTabs } from '@/components/NavigationTabs';
 import { TopNavigation } from '@/components/TopNavigation';
 import { UserProfile } from '@/components/UserProfile';
 import { ComingSoonModal } from '@/components/ComingSoonModal';
+import { CardHighlightOverlay } from '@/components/CardHighlightOverlay';
 
 const Index = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -53,6 +53,9 @@ const Index = () => {
           onClose={() => setIsChatOpen(false)} 
         />
       )}
+
+      {/* Card Highlight Overlay */}
+      <CardHighlightOverlay />
 
       {/* Welcome Modal */}
       {showWelcomeModal && (

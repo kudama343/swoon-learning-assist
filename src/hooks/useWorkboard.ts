@@ -11,6 +11,7 @@ interface WorkboardCard {
   tags?: string[];
   score?: string;
   isDue?: boolean;
+  isNewCard?: boolean;
 }
 
 interface WorkboardState {
@@ -19,46 +20,12 @@ interface WorkboardState {
 
 export const useWorkboard = () => {
   const [cards, setCards] = useState<WorkboardState>({
-    'Core Math': [
-      {
-        id: '1',
-        title: 'dadad',
-        type: 'Assignment',
-        dueDate: new Date(2024, 4, 16),
-        subject: 'Core Math'
-      },
-      {
-        id: '2',
-        title: 'dadda',
-        type: 'Assignment',
-        dueDate: new Date(2024, 4, 18),
-        subject: 'Core Math'
-      },
-      {
-        id: '3',
-        title: 'Turn in language arts worksheet by 8:10 AM the next day',
-        type: 'Homework',
-        tags: ['Homework', 'Session Summary'],
-        dueDate: new Date(2024, 4, 16),
-        subject: 'Core Math',
-        score: '0/4',
-        isDue: true
-      },
-      {
-        id: '4',
-        title: 'Review Fanboys information on Trello board',
-        type: 'Session Summary',
-        tags: ['Session Summary'],
-        dueDate: new Date(2024, 4, 18),
-        subject: 'Core Math',
-        score: '0/2'
-      }
-    ],
+    'Core Math': [],
     'AP American Literature': [],
-    'AP Biology': [],
-    'AP Calculus AB': [],
-    'AP Calculus BC': []
+    'AP Biology': []
   });
+
+  const [highlightedCard, setHighlightedCard] = useState<string | null>(null);
 
   const [cerebrasService] = useState(() => new CerebrasService('csk-ckx4c5rfw9f4y6fdrtn5fyc564xcvvyynyfjvet3nvxcj6hj'));
 
@@ -66,6 +33,7 @@ export const useWorkboard = () => {
     const newCard: WorkboardCard = {
       ...card,
       id: Date.now().toString(),
+      isNewCard: true,
     };
 
     setCards(prev => ({
@@ -73,7 +41,25 @@ export const useWorkboard = () => {
       [card.subject]: [...(prev[card.subject] || []), newCard],
     }));
 
+    // Set the highlighted card
+    setHighlightedCard(newCard.id);
+
     return newCard;
+  }, []);
+
+  const clearHighlight = useCallback(() => {
+    setHighlightedCard(null);
+    // Remove the isNewCard flag from all cards
+    setCards(prev => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach(subject => {
+        updated[subject] = updated[subject].map(card => ({
+          ...card,
+          isNewCard: false
+        }));
+      });
+      return updated;
+    });
   }, []);
 
   const createTaskFromMessage = useCallback(async (message: string) => {
@@ -121,5 +107,7 @@ export const useWorkboard = () => {
     sendChatMessage,
     getDueSoon,
     getUrgentTasks,
+    highlightedCard,
+    clearHighlight,
   };
 };
