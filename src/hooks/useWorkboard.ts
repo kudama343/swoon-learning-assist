@@ -22,7 +22,15 @@ export const useWorkboard = () => {
   const [columnOrder, setColumnOrder] = useState<string[]>(['Core Math', 'AP American Literature', 'AP Biology']);
   
   const [cards, setCards] = useState<WorkboardState>({
-    'Core Math': [],
+    'Core Math': [      {
+        id: '1',
+        title: 'Quadratic Equations Practice',
+        type: 'Homework',
+        dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // Due in 2 days
+        subject: 'Core Math',
+        tags: ['Homework', 'Algebra'],
+      }
+    ],
     'AP American Literature': [],
     'AP Biology': []
   });
@@ -42,46 +50,47 @@ export const useWorkboard = () => {
   }, []);
 
   const addCard = useCallback((card: Omit<WorkboardCard, 'id'>) => {
-    console.log('Adding card:', card);
-    
-    const newCard: WorkboardCard = {
-      ...card,
-      id: Date.now().toString(),
-      isNewCard: true,
+  console.log('Adding card:', card);
+  
+  const newCard: WorkboardCard = {
+    ...card,
+    id: Date.now().toString(),
+    isNewCard: true,
+    tags: [card.type, ...(card.tags || [])], // Add type to tags array
+  };
+
+  console.log('New card created:', newCard);
+
+  setCards(prev => {
+    const updated = {
+      ...prev,
+      [card.subject]: [...(prev[card.subject] || []), newCard],
     };
+    console.log('Updated cards state:', updated);
+    return updated;
+  });
 
-    console.log('New card created:', newCard);
+  // Move the column with the new card to the front
+  moveColumnToFront(card.subject);
 
+  // Set the highlighted card
+  setHighlightedCard(newCard.id);
+
+  // Auto-clear highlight after 5 seconds
+  setTimeout(() => {
+    console.log('Clearing highlight for card:', newCard.id);
+    setHighlightedCard(null);
     setCards(prev => {
-      const updated = {
-        ...prev,
-        [card.subject]: [...(prev[card.subject] || []), newCard],
-      };
-      console.log('Updated cards state:', updated);
+      const updated = { ...prev };
+      updated[card.subject] = updated[card.subject].map(c => 
+        c.id === newCard.id ? { ...c, isNewCard: false } : c
+      );
       return updated;
     });
+  }, 5000);
 
-    // Move the column with the new card to the front
-    moveColumnToFront(card.subject);
-
-    // Set the highlighted card
-    setHighlightedCard(newCard.id);
-
-    // Auto-clear highlight after 5 seconds
-    setTimeout(() => {
-      console.log('Clearing highlight for card:', newCard.id);
-      setHighlightedCard(null);
-      setCards(prev => {
-        const updated = { ...prev };
-        updated[card.subject] = updated[card.subject].map(c => 
-          c.id === newCard.id ? { ...c, isNewCard: false } : c
-        );
-        return updated;
-      });
-    }, 5000);
-
-    return newCard;
-  }, [moveColumnToFront]);
+  return newCard;
+}, [moveColumnToFront]);
 
   const clearHighlight = useCallback(() => {
     setHighlightedCard(null);
