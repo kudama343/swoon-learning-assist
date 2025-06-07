@@ -20,14 +20,15 @@ interface WorkboardCardProps {
 }
 
 export const WorkboardCard = ({ card }: WorkboardCardProps) => {
-  const { highlightedCard } = useWorkboard() as any;
+  const { highlightedCard } = useWorkboard();
   const isHighlighted = highlightedCard === card.id;
 
   return (
     <Card 
       className={`
         bg-swoon-white border border-swoon-mid-gray hover:shadow-md transition-all cursor-pointer
-        ${isHighlighted ? 'animate-pulse shadow-2xl ring-4 ring-swoon-blue z-40 relative' : ''}
+        ${isHighlighted ? 'animate-pulse border-swoon-blue border-2 shadow-2xl shadow-swoon-blue/50 ring-4 ring-swoon-blue/30' : ''}
+        ${card.isNewCard ? 'animate-pulse border-swoon-blue border-2 shadow-2xl shadow-swoon-blue/50 ring-4 ring-swoon-blue/30' : ''}
       `}
     >
       <div className="p-3 space-y-3">

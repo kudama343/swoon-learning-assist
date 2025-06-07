@@ -37,13 +37,15 @@ export class CerebrasService {
   private initializeContext() {
     const systemPrompt = `You are Swoon Assist, an AI study companion for students. You help manage their workboard tasks and assignments.
 
-AVAILABLE SUBJECTS: Core Math, AP American Literature, AP Biology, AP Calculus AB, AP Calculus BC
+AVAILABLE SUBJECTS: Core Math, AP American Literature, AP Biology
 
 CAPABILITIES:
 1. Create assignment cards with natural language
 2. Parse dates (today, tomorrow, next Friday, in 2 weeks, etc.)
-3. Detect subject from context
-4. Provide study suggestions and priority recommendations
+3. Detect subject from context - be very specific about matching these exact subjects:
+   - "Core Math" for any math-related tasks
+   - "AP American Literature" for literature, English, writing tasks
+   - "AP Biology" for biology, science tasks
 
 RESPONSE FORMAT for task creation:
 When creating a task, respond with JSON:
@@ -51,13 +53,19 @@ When creating a task, respond with JSON:
   "action": "create_task",
   "task": {
     "title": "Assignment title",
-    "subject": "Subject name",
+    "subject": "Core Math|AP American Literature|AP Biology",
     "type": "Assignment|Homework|Lab Report|Test",
     "dueDate": "YYYY-MM-DD",
     "tags": ["optional", "tags"]
   },
   "message": "Friendly confirmation message"
 }
+
+SUBJECT DETECTION RULES:
+- If user mentions "math", "algebra", "calculus", "geometry" → "Core Math"
+- If user mentions "literature", "english", "writing", "essay" → "AP American Literature"  
+- If user mentions "biology", "science", "lab", "cells" → "AP Biology"
+- If user specifies exact subject name, use that exactly
 
 For general questions, respond naturally without JSON.
 
@@ -104,17 +112,37 @@ Current date: ${new Date().toISOString().split('T')[0]}`;
 
   async createTask(userMessage: string): Promise<TaskCreationResult> {
     try {
-      const response = await this.sendMessage(userMessage);
+      const response = await this.sendMessage(`Create a task: ${userMessage}`);
       
       // Try to parse JSON response for task creation
       if (response.includes('"action": "create_task"')) {
         const jsonMatch = response.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
+          
+          // Ensure subject is one of the valid ones
+          const validSubjects = ['Core Math', 'AP American Literature', 'AP Biology'];
+          let subject = parsed.task.subject;
+          
+          if (!validSubjects.includes(subject)) {
+            // Fallback subject detection
+            const lowerMessage = userMessage.toLowerCase();
+            if (lowerMessage.includes('math') || lowerMessage.includes('algebra') || lowerMessage.includes('calculus')) {
+              subject = 'Core Math';
+            } else if (lowerMessage.includes('literature') || lowerMessage.includes('english') || lowerMessage.includes('writing')) {
+              subject = 'AP American Literature';
+            } else if (lowerMessage.includes('biology') || lowerMessage.includes('science') || lowerMessage.includes('lab')) {
+              subject = 'AP Biology';
+            } else {
+              subject = 'Core Math'; // default
+            }
+          }
+
           return {
             success: true,
             card: {
               ...parsed.task,
+              subject,
               dueDate: new Date(parsed.task.dueDate),
             },
             message: parsed.message,

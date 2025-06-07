@@ -19,6 +19,8 @@ interface WorkboardState {
 }
 
 export const useWorkboard = () => {
+  const [columnOrder, setColumnOrder] = useState<string[]>(['Core Math', 'AP American Literature', 'AP Biology']);
+  
   const [cards, setCards] = useState<WorkboardState>({
     'Core Math': [],
     'AP American Literature': [],
@@ -28,6 +30,13 @@ export const useWorkboard = () => {
   const [highlightedCard, setHighlightedCard] = useState<string | null>(null);
 
   const [cerebrasService] = useState(() => new CerebrasService('csk-ckx4c5rfw9f4y6fdrtn5fyc564xcvvyynyfjvet3nvxcj6hj'));
+
+  const moveColumnToFront = useCallback((subject: string) => {
+    setColumnOrder(prev => {
+      const filtered = prev.filter(col => col !== subject);
+      return [subject, ...filtered];
+    });
+  }, []);
 
   const addCard = useCallback((card: Omit<WorkboardCard, 'id'>) => {
     const newCard: WorkboardCard = {
@@ -41,11 +50,26 @@ export const useWorkboard = () => {
       [card.subject]: [...(prev[card.subject] || []), newCard],
     }));
 
+    // Move the column with the new card to the front
+    moveColumnToFront(card.subject);
+
     // Set the highlighted card
     setHighlightedCard(newCard.id);
 
+    // Auto-clear highlight after 5 seconds
+    setTimeout(() => {
+      setHighlightedCard(null);
+      setCards(prev => {
+        const updated = { ...prev };
+        updated[card.subject] = updated[card.subject].map(c => 
+          c.id === newCard.id ? { ...c, isNewCard: false } : c
+        );
+        return updated;
+      });
+    }, 5000);
+
     return newCard;
-  }, []);
+  }, [moveColumnToFront]);
 
   const clearHighlight = useCallback(() => {
     setHighlightedCard(null);
@@ -102,6 +126,7 @@ export const useWorkboard = () => {
 
   return {
     cards,
+    columnOrder,
     addCard,
     createTaskFromMessage,
     sendChatMessage,
