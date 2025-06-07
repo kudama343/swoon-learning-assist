@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,9 @@ import { Send, Bot, User, CheckCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useWorkboard } from '@/hooks/useWorkboard';
 import { useToast } from '@/hooks/use-toast';
+
+// Cerebras API integration
+const CEREBRAS_API_KEY = import.meta.env.VITE_CEREBRAS_API_KEY;
 
 interface Message {
   id: string;
@@ -24,11 +26,52 @@ interface ChatInterfaceProps {
 const initialMessages: Message[] = [
   {
     id: '1',
-    content: "Hi! I'm Swoon Assist, your AI study companion. I can help you create new assignments, check what's due, and organize your workboard. What would you like to work on today?",
+    content: "Hi! I'm Swoon Assist, your AI study companion powered by Cerebras. I can help you create new assignments, check what's due, and organize your workboard. What would you like to work on today?",
     sender: 'assistant',
     timestamp: new Date()
   }
 ];
+
+// Cerebras API function
+const callCerebrasAPI = async (message: string): Promise<string> => {
+  try {
+    const response = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${CEREBRAS_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'llama3.1-8b',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are Swoon Assist, a helpful AI study companion. You help students manage their assignments, create study plans, and stay organized. Be friendly, encouraging, and concise in your responses.'
+          },
+          {
+            role: 'user',
+            content: message
+          }
+        ],
+        max_tokens: 500,
+        temperature: 0.7,
+        stream: false
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Cerebras API error: ${response.status} ${response.statusText}`);
+    }
+    console.log('Response Data: ', response)
+    const data = await response.json();
+    console.log('Cerebras API Response:', data);
+    
+    return data.choices[0]?.message?.content || 'Sorry, I couldn\'t generate a response. Please try again!';
+  } catch (error) {
+    console.error('Cerebras API Error:', error);
+    return 'I\'m having trouble connecting to my AI brain right now. Please try again in a moment!';
+  }
+};
 
 export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
@@ -64,6 +107,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
       let cardCreated = false;
 
       if (isTaskCreation) {
+        // Handle task creation with workboard integration
         const result = await createTaskFromMessage(currentInput);
         response = result.message;
         cardCreated = result.success;
@@ -74,21 +118,23 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
             description: `Added "${result.card?.title}" to ${result.card?.subject}`,
           });
         }
+      } else if (currentInput.toLowerCase().includes('due') && currentInput.toLowerCase().includes('week')) {
+        // Handle due assignments query
+        const dueSoon = getDueSoon();
+        response = dueSoon.length > 0 
+          ? `Here's what's due this week:\n${dueSoon.map(card => `• ${card.title} (${card.subject}) - Due ${card.dueDate.toLocaleDateString()}`).join('\n')}`
+          : "You don't have any assignments due this week. Great job staying ahead!";
+      } else if (currentInput.toLowerCase().includes('urgent') || currentInput.toLowerCase().includes('first')) {
+        // Handle urgent tasks query
+        const urgent = getUrgentTasks();
+        response = urgent.length > 0
+          ? `Here are your most urgent tasks:\n${urgent.map(card => `🚨 ${card.title} (${card.subject}) - Due ${card.dueDate.toLocaleDateString()}`).join('\n')}\n\nI recommend starting with the earliest due date!`
+          : "No urgent tasks right now! You're all caught up.";
       } else {
-        // Handle information queries
-        if (currentInput.toLowerCase().includes('due') && currentInput.toLowerCase().includes('week')) {
-          const dueSoon = getDueSoon();
-          response = dueSoon.length > 0 
-            ? `Here's what's due this week:\n${dueSoon.map(card => `• ${card.title} (${card.subject}) - Due ${card.dueDate.toLocaleDateString()}`).join('\n')}`
-            : "You don't have any assignments due this week. Great job staying ahead!";
-        } else if (currentInput.toLowerCase().includes('urgent') || currentInput.toLowerCase().includes('first')) {
-          const urgent = getUrgentTasks();
-          response = urgent.length > 0
-            ? `Here are your most urgent tasks:\n${urgent.map(card => `🚨 ${card.title} (${card.subject}) - Due ${card.dueDate.toLocaleDateString()}`).join('\n')}\n\nI recommend starting with the earliest due date!`
-            : "No urgent tasks right now! You're all caught up.";
-        } else {
-          response = await sendChatMessage(currentInput);
-        }
+        // Use Cerebras API for general chat
+        console.log('Sending message to Cerebras:', currentInput);
+        response = await callCerebrasAPI(currentInput);
+        console.log('Cerebras response received:', response);
       }
 
       const assistantMessage: Message = {
@@ -127,6 +173,15 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
     }
   }, [messages, isTyping]);
 
+  // Check for API key on component mount
+  useEffect(() => {
+    if (!CEREBRAS_API_KEY) {
+      console.warn('CEREBRAS_API_KEY not found. Please set your API key in environment variables.');
+    } else {
+      console.log('Cerebras API key loaded successfully');
+    }
+  }, []);
+
   if (!isOpen) return null;
 
   return (
@@ -141,7 +196,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
               </div>
               <div>
                 <h3 className="font-semibold">Swoon Assist</h3>
-                <p className="text-xs opacity-90">Your AI study companion</p>
+                <p className="text-xs opacity-90">Powered by Cerebras AI</p>
               </div>
             </div>
             <Button
@@ -180,7 +235,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
                 </div>
                 
                 <div className={`
-                  max-w-[80%] p-3 rounded-lg text-sm relative
+                  max-w-[80%] p-3 rounded-lg text-sm relative whitespace-pre-line
                   ${message.sender === 'user'
                     ? 'bg-swoon-yellow text-swoon-black'
                     : 'bg-swoon-light-blue text-swoon-black'

@@ -1,75 +1,58 @@
-
-import { Search, Bell, Settings, Menu } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { User, ShoppingCart, FileText, Users, Bell } from 'lucide-react';
+import headerIcon from './assets/header-icon.png'; // Adjust the path based on your file structure
 
 export const TopNavigation = () => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   return (
-    <nav className="bg-swoon-white border-b border-swoon-mid-gray">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo and Brand */}
+    <header className="bg-swoon-blue shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <div className="flex items-center justify-between">
+          {/* Left side - Logo and Company */}
           <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="md:hidden"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              <Menu className="w-5 h-5" />
-            </Button>
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-swoon-blue rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">S</span>
+            
+              <img src={headerIcon} alt="Header Icon" className="w-15 h-6" />
+           
+            <div className="text-white">
+              <span className="ml-2 text-sm opacity-90">ACME Company</span>
+              <span className="ml-2 text-xs bg-swoon-white/20 px-2 py-1 rounded">v4.0.20</span>
+            </div>
+          </div>
+
+          {/* Right side - Navigation and User */}
+          <div className="flex items-center space-x-6">
+            {/* Navigation Icons */}
+            <div className="flex items-center space-x-4 text-white">
+              <div className="flex flex-col items-center cursor-pointer hover:opacity-80">
+                <Users className="w-5 h-5" />
+                <span className="text-xs">People</span>
               </div>
-              <span className="text-xl font-bold text-swoon-black hidden sm:block">Swoon Learning</span>
-              <span className="text-lg font-bold text-swoon-black sm:hidden">Swoon</span>
+              <div className="flex flex-col items-center cursor-pointer hover:opacity-80">
+                <FileText className="w-5 h-5" />
+                <span className="text-xs">Sessions</span>
+              </div>
+              <div className="flex flex-col items-center cursor-pointer hover:opacity-80">
+                <ShoppingCart className="w-5 h-5" />
+                <span className="text-xs">Orders</span>
+              </div>
+              <div className="flex flex-col items-center cursor-pointer hover:opacity-80">
+                <FileText className="w-5 h-5" />
+                <span className="text-xs">Surveys</span>
+              </div>
             </div>
-          </div>
 
-          {/* Search Bar - Hidden on mobile */}
-          <div className="hidden md:flex flex-1 max-w-lg mx-8">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-swoon-dark-gray w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search assignments, subjects..."
-                className="w-full pl-10 pr-4 py-2 border border-swoon-mid-gray rounded-lg focus:outline-none focus:border-swoon-blue bg-swoon-light-gray"
-              />
+            {/* Notification and User */}
+            <div className="flex items-center space-x-3">
+              <Bell className="w-6 h-6 text-white cursor-pointer hover:opacity-80" />
+              <div className="bg-swoon-white/20 rounded-lg px-3 py-2 text-white">
+                <span className="text-sm font-medium">root</span>
+                <div className="text-xs opacity-90">Root</div>
+              </div>
+              <div className="w-8 h-8 bg-swoon-white rounded-full flex items-center justify-center">
+                <User className="w-4 h-4 text-swoon-blue" />
+              </div>
             </div>
-          </div>
-
-          {/* Right side actions */}
-          <div className="flex items-center space-x-2 md:space-x-4">
-            <Button variant="ghost" size="sm" className="relative">
-              <Bell className="w-5 h-5 text-swoon-dark-gray" />
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-swoon-red rounded-full"></span>
-            </Button>
-            <Button variant="ghost" size="sm">
-              <Settings className="w-5 h-5 text-swoon-dark-gray" />
-            </Button>
-            <Button variant="ghost" size="sm" className="md:hidden">
-              <Search className="w-5 h-5 text-swoon-dark-gray" />
-            </Button>
           </div>
         </div>
-
-        {/* Mobile Search - Shown when mobile menu is open */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-swoon-mid-gray">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-swoon-dark-gray w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search assignments, subjects..."
-                className="w-full pl-10 pr-4 py-2 border border-swoon-mid-gray rounded-lg focus:outline-none focus:border-swoon-blue bg-swoon-light-gray"
-              />
-            </div>
-          </div>
-        )}
       </div>
-    </nav>
+    </header>
   );
 };
