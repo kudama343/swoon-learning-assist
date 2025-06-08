@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useWorkboard } from '@/hooks/useWorkboard';
 import { useToast } from '@/hooks/use-toast';
 import { AddCardModal } from '@/components/AddCardModal';
+import { WelcomeModal } from '@/components/WelcomeModal';
 
 interface Message {
   id: string;
@@ -69,6 +70,7 @@ export const ChatInterface = ({ isOpen, onClose, defaultSubject, onCardCreate }:
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [modalData, setModalData] = useState<{
     title: string;
     subject: string;
@@ -178,21 +180,33 @@ export const ChatInterface = ({ isOpen, onClose, defaultSubject, onCardCreate }:
           // If more info is needed, the AI will ask for it in the response
         }
       } else {
-        // Handle information queries
-        if (currentInput.toLowerCase().includes('due') && currentInput.toLowerCase().includes('week')) {
-          const dueSoon = getDueSoon();
-          response = dueSoon.length > 0 
-            ? `Here's what's due this week:\n${dueSoon.map(card => `• ${card.title} (${card.subject}) - Due ${card.dueDate.toLocaleDateString()}`).join('\n')}`
-            : "You don't have any assignments due this week. Great job staying ahead!";
-        } else if (currentInput.toLowerCase().includes('urgent') || currentInput.toLowerCase().includes('first')) {
-          const urgent = getUrgentTasks();
-          response = urgent.length > 0
-            ? `Here are your most urgent tasks:\n${urgent.map(card => `🚨 ${card.title} (${card.subject}) - Due ${card.dueDate.toLocaleDateString()}`).join('\n')}\n\nI recommend starting with the earliest due date!`
-            : "No urgent tasks right now! You're all caught up.";
-        } else {
-          response = await sendChatMessage(currentInput);
-        }
-      }
+        const lowerInput = currentInput.toLowerCase();
+  
+  // Enhanced priority/status detection
+  const priorityKeywords = [
+    'priority', 'priorities', 'urgent', 'first', 'important', 'focus',
+    'status', 'what should i do', 'what to do', 'next task', 'start with',
+    'most important', 'tackle first', 'begin with', 'work on first',
+    'due soon', 'coming up', 'deadlines', 'schedule', 'today', 'tomorrow'
+  ];
+  
+  const isPriorityRequest = priorityKeywords.some(keyword => 
+    lowerInput.includes(keyword)
+  );
+  
+  if (isPriorityRequest) {
+    // Show WelcomeModal for priority tasks
+    setShowWelcomeModal(true);
+    response = "Let me show you what needs your attention right now! I've opened your priority overview.";
+  } else if (lowerInput.includes('due') && lowerInput.includes('week')) {
+    const dueSoon = getDueSoon();
+    response = dueSoon.length > 0 
+      ? `Here's what's due this week:\n${dueSoon.map(card => `• ${card.title} (${card.subject}) - Due ${card.dueDate.toLocaleDateString()}`).join('\n')}`
+      : "You don't have any assignments due this week. Great job staying ahead!";
+  } else {
+    response = await sendChatMessage(currentInput);
+  }
+}
 
       const assistantMessage: Message = {
         id: generateMessageId(),
@@ -366,6 +380,11 @@ export const ChatInterface = ({ isOpen, onClose, defaultSubject, onCardCreate }:
           prefilledData={modalData}
         />
       )}
+      {showWelcomeModal && (
+  <WelcomeModal 
+    onClose={() => setShowWelcomeModal(false)}
+  />
+)}
     </>
   );
 };

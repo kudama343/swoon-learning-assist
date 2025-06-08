@@ -9,9 +9,10 @@ import { format, isToday, isTomorrow, differenceInDays } from 'date-fns';
 
 interface WelcomeModalProps {
   onClose: () => void;
+  priorityMode?: boolean; // New prop to indicate priority-focused display
 }
 
-export const WelcomeModal = ({ onClose }: WelcomeModalProps) => {
+export const WelcomeModal = ({ onClose, priorityMode = false }: WelcomeModalProps) => {
   const [isVisible, setIsVisible] = useState(true);
   const { getDueSoon, getUrgentTasks } = useWorkboard();
 
@@ -22,6 +23,12 @@ export const WelcomeModal = ({ onClose }: WelcomeModalProps) => {
 
   const dueSoon = getDueSoon();
   const urgentTasks = getUrgentTasks();
+
+  const tasksToShow = priorityMode 
+    ? [...urgentTasks, ...dueSoon]
+        .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())
+        .slice(0, 2)
+    : dueSoon.slice(0, 4);
 
   const formatDueDate = (date: Date) => {
     if (isToday(date)) return 'today';
@@ -52,8 +59,15 @@ export const WelcomeModal = ({ onClose }: WelcomeModalProps) => {
                 <span className="text-white font-bold">S</span>
               </div>
               <div>
-                <h2 className="text-xl font-bold text-swoon-black">🎯 Good morning, Kelly!</h2>
-                <p className="text-swoon-dark-gray text-sm">Here's what needs your attention</p>
+                <h2 className="text-xl font-bold text-swoon-black">
+                  {priorityMode ? "🎯 Your Priority Tasks" : "🎯 Good morning, Kelly!"}
+                </h2>
+                <p className="text-swoon-dark-gray text-sm">
+                  {priorityMode 
+                    ? "Focus on these tasks first" 
+                    : "Here's what needs your attention"
+                  }
+                </p>
               </div>
             </div>
             <Button
@@ -67,52 +81,65 @@ export const WelcomeModal = ({ onClose }: WelcomeModalProps) => {
           </div>
 
           {/* Due Soon Section */}
-          {dueSoon.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <AlertCircle className="w-5 h-5 text-swoon-red" />
-                <h3 className="font-semibold text-swoon-black">📚 Due Soon:</h3>
-              </div>
-              
-              <div className="space-y-3 max-h-40 overflow-y-auto">
-                {dueSoon.slice(0, 4).map((task) => (
-                  <div key={task.id} className="flex items-center justify-between p-3 bg-swoon-light-gray rounded-lg">
-                    <div className="flex-1">
-                      <p className="font-medium text-swoon-black text-sm">{task.title}</p>
-                      <p className="text-xs text-swoon-dark-gray">{task.subject}</p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge className={`text-xs ${
-                        getPriority(task.dueDate) === 'high' 
-                          ? 'bg-swoon-red text-white' 
-                          : getPriority(task.dueDate) === 'medium'
-                          ? 'bg-swoon-yellow text-swoon-black'
-                          : 'bg-swoon-blue text-white'
-                      }`}>
-                        Due {formatDueDate(task.dueDate)}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          {tasksToShow.length > 0 && (
+    <div className="space-y-4">
+      <div className="flex items-center space-x-2">
+        <AlertCircle className="w-5 h-5 text-swoon-red" />
+        <h3 className="font-semibold text-swoon-black">
+          {priorityMode ? "🚨 Priority Tasks:" : "📚 Due Soon:"}
+        </h3>
+      </div>
+      
+      <div className="space-y-3 max-h-40 overflow-y-auto">
+        {tasksToShow.map((task, index) => (
+          <div key={task.id} className={`
+            flex items-center justify-between p-3 rounded-lg transition-all
+            ${priorityMode && index === 0 
+              ? 'bg-swoon-red/10 border-2 border-swoon-red/20' 
+              : 'bg-swoon-light-gray'
+            }
+          `}>
+            <div className="flex-1">
+              {priorityMode && index === 0 && (
+                <div className="flex items-center space-x-1 mb-1">
+                  <span className="text-xs font-bold text-swoon-red">MOST URGENT</span>
+                </div>
+              )}
+              <p className="font-medium text-swoon-black text-sm">{task.title}</p>
+              <p className="text-xs text-swoon-dark-gray">{task.subject}</p>
             </div>
-          )}
+            <div className="flex items-center space-x-2">
+              <Badge className={`text-xs ${
+                getPriority(task.dueDate) === 'high' 
+                  ? 'bg-swoon-red text-white' 
+                  : getPriority(task.dueDate) === 'medium'
+                  ? 'bg-swoon-yellow text-swoon-black'
+                  : 'bg-swoon-blue text-white'
+              }`}>
+                Due {formatDueDate(task.dueDate)}
+              </Badge>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
 
           {/* Suggestion */}
           <div className="bg-swoon-light-blue p-4 rounded-lg space-y-2">
-            <div className="flex items-center space-x-2">
-              <Lightbulb className="w-5 h-5 text-swoon-blue" />
-              <h3 className="font-semibold text-swoon-black">💡 Suggestion:</h3>
-            </div>
-            <p className="text-sm text-swoon-black">
-              {urgentTasks.length > 0 
-                ? `Start with your ${urgentTasks[0].title.toLowerCase()} since it's due ${formatDueDate(urgentTasks[0].dueDate)}!`
-                : dueSoon.length > 0
-                ? `Focus on your ${dueSoon[0].title.toLowerCase()} coming up ${formatDueDate(dueSoon[0].dueDate)}.`
-                : "You're all caught up! Great job staying organized."
-              }
-            </p>
-          </div>
+    <div className="flex items-center space-x-2">
+      <Lightbulb className="w-5 h-5 text-swoon-blue" />
+      <h3 className="font-semibold text-swoon-black">💡 Suggestion:</h3>
+    </div>
+    <p className="text-sm text-swoon-black">
+      {tasksToShow.length > 0 
+        ? priorityMode
+          ? `Start with "${tasksToShow[0].title}" - it's due ${formatDueDate(tasksToShow[0].dueDate)} and needs immediate attention!`
+          : `Start with your ${tasksToShow[0].title.toLowerCase()} since it's due ${formatDueDate(tasksToShow[0].dueDate)}!`
+        : "You're all caught up! Great job staying organized."
+      }
+    </p>
+  </div>
 
           {/* Action Buttons */}
           <div className="flex space-x-3">
