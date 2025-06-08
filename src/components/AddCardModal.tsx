@@ -21,6 +21,13 @@ interface AddCardModalProps {
     dueDate: Date;
     type: string;
   }) => void;
+  onConfirmPrefilled?: (card: {
+  title: string;
+  subject: string;
+  dueDate: Date;
+  type: string;
+}) => void;
+
   defaultColumn?: string;
   prefilledData?: {
     title: string;
@@ -30,7 +37,15 @@ interface AddCardModalProps {
   };
 }
 
-export const AddCardModal = ({ isOpen, onClose, onSave, defaultColumn, prefilledData }: AddCardModalProps) => {
+export const AddCardModal = ({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  defaultColumn, 
+  prefilledData, 
+  onConfirmPrefilled 
+}: AddCardModalProps) => {
+
   const [title, setTitle] = useState('');
   const [selectedColumn, setSelectedColumn] = useState(defaultColumn || '');
   const [dueDate, setDueDate] = useState<Date>();
@@ -56,24 +71,29 @@ export const AddCardModal = ({ isOpen, onClose, onSave, defaultColumn, prefilled
   }, [prefilledData, defaultColumn]);
 
   const handleSave = () => {
-    if (!title || !selectedColumn || !dueDate || !type) {
-      return; // Don't save if required fields are missing
-    }
+  if (!title || !selectedColumn || !dueDate || !type) return;
 
-    onSave({
-      title,
-      subject: selectedColumn,
-      dueDate,
-      type,
-    });
-
-    // Reset form
-    setTitle('');
-    setSelectedColumn(defaultColumn || '');
-    setDueDate(undefined);
-    setType('');
-    onClose();
+  const cardData = {
+    title,
+    subject: selectedColumn,
+    dueDate,
+    type,
   };
+
+  if (prefilledData && onConfirmPrefilled) {
+    onSave(cardData); // Trigger external handler
+  } else {
+    onSave(cardData); // Regular flow
+  }
+
+  // Reset form
+  setTitle('');
+  setSelectedColumn(defaultColumn || '');
+  setDueDate(undefined);
+  setType('');
+  onClose();
+};
+
 
   const handleCancel = () => {
     // Reset form

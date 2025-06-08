@@ -19,6 +19,13 @@ interface Message {
 interface ChatInterfaceProps {
   isOpen: boolean;
   onClose: () => void;
+  defaultSubject?: string; // Add optional prop for default subject
+  onCardCreate?: (cardData: {
+    title: string;
+    subject: string;
+    dueDate: Date;
+    type: string;
+  }) => void; // Callback to pass card data to parent
 }
 
 const initialMessages: Message[] = [
@@ -57,7 +64,7 @@ const loadChatHistory = (): Message[] => {
   return initialMessages;
 };
 
-export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
+export const ChatInterface = ({ isOpen, onClose, defaultSubject, onCardCreate }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>(() => loadChatHistory());
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -70,7 +77,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   } | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messageIdCounter = useRef(Math.floor(Math.random() * 10000)); // Start with random number
-  const { createTaskFromMessage, sendChatMessage, getDueSoon, getUrgentTasks, addCard } = useWorkboard();
+  const { createTaskFromMessage, sendChatMessage, getDueSoon, getUrgentTasks } = useWorkboard();
   const { toast } = useToast();
 
   // Generate unique message ID
@@ -83,6 +90,45 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   useEffect(() => {
     saveChatHistory(messages);
   }, [messages]);
+
+  // Updated handleAddCard to pass data to parent component
+  const handleAddCard = (cardData: {
+    title: string;
+    subject: string;
+    dueDate: Date;
+    type: string;
+  }) => {
+    console.log('card data: ', cardData);
+    
+    // Pass card data to parent (WorkboardColumn) if callback exists
+    if (onCardCreate) {
+      // Override subject with defaultSubject if provided
+      const finalCardData = {
+        ...cardData,
+        subject: defaultSubject || cardData.subject
+      };
+      onCardCreate(finalCardData);
+    }
+    
+    setIsModalOpen(false);
+    setModalData(null);
+    
+    toast({
+      title: "Task Created! ✨",
+      description: `Added "${cardData.title}" to ${defaultSubject || cardData.subject}`,
+      className: "bg-swoon-blue text-white border-swoon-blue",
+    });
+
+    // Add success message to chat
+    const successMessage: Message = {
+      id: generateMessageId(),
+      content: `Perfect! I've successfully created "${cardData.title}" and added it to your ${defaultSubject || cardData.subject} column. The card is now glowing to help you spot it easily!`,
+      sender: 'assistant',
+      timestamp: new Date(),
+      cardCreated: true
+    };
+    setMessages(prev => [...prev, successMessage]);
+  };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
@@ -120,7 +166,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
           // Extract card data and show modal for user to review/edit
           setModalData({
             title: result.card.title,
-            subject: result.card.subject,
+            subject: defaultSubject || result.card.subject, // Use defaultSubject if provided
             dueDate: result.card.dueDate,
             type: result.card.type
           });
@@ -169,34 +215,6 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
     } finally {
       setIsTyping(false);
     }
-  };
-
-  const handleModalSave = (cardData: {
-    title: string;
-    subject: string;
-    dueDate: Date;
-    type: string;
-  }) => {
-    addCard(cardData);
-    
-    setIsModalOpen(false);
-    setModalData(null);
-    
-    toast({
-      title: "Task Created! ✨",
-      description: `Added "${cardData.title}" to ${cardData.subject}`,
-      className: "bg-swoon-blue text-white border-swoon-blue",
-    });
-
-    // Add success message to chat
-    const successMessage: Message = {
-      id: generateMessageId(),
-      content: `Perfect! I've successfully created "${cardData.title}" and added it to your ${cardData.subject} column. The card is now glowing to help you spot it easily!`,
-      sender: 'assistant',
-      timestamp: new Date(),
-      cardCreated: true
-    };
-    setMessages(prev => [...prev, successMessage]);
   };
 
   const handleModalClose = () => {
@@ -343,8 +361,8 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
         <AddCardModal
           isOpen={isModalOpen}
           onClose={handleModalClose}
-          onSave={handleModalSave}
-          defaultColumn={modalData.subject}
+          onSave={handleAddCard}
+          defaultColumn={defaultSubject || modalData.subject}
           prefilledData={modalData}
         />
       )}
