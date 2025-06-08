@@ -1,3 +1,4 @@
+// Updated cerebrasService.ts
 
 interface Message {
   role: 'system' | 'user' | 'assistant';
@@ -12,7 +13,6 @@ interface CerebrasResponse {
   }>;
 }
 
-
 interface TaskCreationResult {
   success: boolean;
   card?: {
@@ -24,6 +24,12 @@ interface TaskCreationResult {
   };
   message: string;
   needsMoreInfo?: boolean;
+  parsedData?: {
+    Title: string;
+    Column: string;
+    'Due Date': string;
+    Type: string;
+  };
 }
 
 export class CerebrasService {
@@ -164,11 +170,34 @@ You must ALWAYS return valid JSON. Never include explanatory text outside the JS
 
   async createTask(userMessage: string): Promise<TaskCreationResult> {
     try {
-      const response = await this.sendMessage(`Create assignment card: ${userMessage}`);
-      console.log('Cerebras response:', response);
+      const response = await fetch(this.apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b',
+          messages: [
+            { role: 'system', content: this.conversationHistory[0].content },
+            { role: 'user', content: userMessage }
+          ],
+          max_tokens: 500,
+          temperature: 0.3,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
+
+      const data: CerebrasResponse = await response.json();
+      const assistantMessage = data.choices[0]?.message?.content || 'Sorry, I couldn\'t process that request.';
+      
+      console.log('Cerebras response:', assistantMessage);
       
       // Extract JSON from response
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      const jsonMatch = assistantMessage.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         return {
           success: false,
@@ -214,6 +243,7 @@ You must ALWAYS return valid JSON. Never include explanatory text outside the JS
         success: true,
         card: finalCard,
         message: `Perfect! I've created "${parsed.Title}" for ${parsed.Column}, due ${parsed['Due Date']}.`,
+        parsedData: parsed
       };
     } catch (error) {
       console.error('Task creation error:', error);

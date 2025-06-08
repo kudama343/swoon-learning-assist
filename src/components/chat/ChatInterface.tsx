@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Send, Bot, User, CheckCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useWorkboard } from '@/hooks/useWorkboard';
 import { useToast } from '@/hooks/use-toast';
+import { AddCardModal } from '@/components/AddCardModal';
 
 interface Message {
   id: string;
@@ -45,10 +45,10 @@ const loadChatHistory = (): Message[] => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Convert timestamp strings back to Date objects
-      return parsed.map((msg: any) => ({
+      return parsed.map((msg: any, index: number) => ({
         ...msg,
-        timestamp: new Date(msg.timestamp)
+        timestamp: new Date(msg.timestamp),
+        id: msg.id || `initial-${index}-${Date.now()}` // Ensure unique IDs for old messages
       }));
     }
   } catch (error) {
@@ -61,9 +61,23 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>(() => loadChatHistory());
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalData, setModalData] = useState<{
+    title: string;
+    subject: string;
+    dueDate: Date;
+    type: string;
+  } | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const { createTaskFromMessage, sendChatMessage, getDueSoon, getUrgentTasks } = useWorkboard();
+  const messageIdCounter = useRef(Math.floor(Math.random() * 10000)); // Start with random number
+  const { createTaskFromMessage, sendChatMessage, getDueSoon, getUrgentTasks, addCard } = useWorkboard();
   const { toast } = useToast();
+
+  // Generate unique message ID
+  const generateMessageId = () => {
+    messageIdCounter.current += 1;
+    return `msg-${Date.now()}-${messageIdCounter.current}-${Math.random().toString(36).substr(2, 9)}`;
+  };
 
   // Save messages to localStorage whenever messages change
   useEffect(() => {
@@ -74,7 +88,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
     if (!inputValue.trim()) return;
 
     const newMessage: Message = {
-      id: Date.now().toString(),
+      id: generateMessageId(),
       content: inputValue,
       sender: 'user',
       timestamp: new Date()
@@ -101,19 +115,20 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
         console.log('Task creation result:', result);
         
         response = result.message;
-        cardCreated = result.success;
         
-        if (result.success) {
-          toast({
-            title: "Task Created! ✨",
-            description: `Added "${result.card?.title}" to ${result.card?.subject}`,
-            className: "bg-swoon-blue text-white border-swoon-blue",
+        if (result.success && result.card) {
+          // Extract card data and show modal for user to review/edit
+          setModalData({
+            title: result.card.title,
+            subject: result.card.subject,
+            dueDate: result.card.dueDate,
+            type: result.card.type
           });
+          setIsModalOpen(true);
           
-          // Enhanced response for successful task creation
-          response = `Perfect! I've created "${result.card?.title}" and added it to your ${result.card?.subject} column. The card is now glowing to help you spot it easily, and I've moved that column to the front for better visibility.`;
-        } else {
-          console.log('Task creation failed or needs more info:', result.message);
+          response = `I've prepared your task card with the details I understood. Please review and confirm the information in the modal that just opened.`;
+        } else if (result.needsMoreInfo) {
+          console.log('Task creation needs more info:', result.message);
           // If more info is needed, the AI will ask for it in the response
         }
       } else {
@@ -134,7 +149,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
       }
 
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: generateMessageId(),
         content: response,
         sender: 'assistant',
         timestamp: new Date(),
@@ -145,7 +160,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
     } catch (error) {
       console.error('Chat error:', error);
       const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: generateMessageId(),
         content: "I'm having trouble right now. Please try again in a moment!",
         sender: 'assistant',
         timestamp: new Date()
@@ -154,6 +169,48 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
     } finally {
       setIsTyping(false);
     }
+  };
+
+  const handleModalSave = (cardData: {
+    title: string;
+    subject: string;
+    dueDate: Date;
+    type: string;
+  }) => {
+    addCard(cardData);
+    
+    setIsModalOpen(false);
+    setModalData(null);
+    
+    toast({
+      title: "Task Created! ✨",
+      description: `Added "${cardData.title}" to ${cardData.subject}`,
+      className: "bg-swoon-blue text-white border-swoon-blue",
+    });
+
+    // Add success message to chat
+    const successMessage: Message = {
+      id: generateMessageId(),
+      content: `Perfect! I've successfully created "${cardData.title}" and added it to your ${cardData.subject} column. The card is now glowing to help you spot it easily!`,
+      sender: 'assistant',
+      timestamp: new Date(),
+      cardCreated: true
+    };
+    setMessages(prev => [...prev, successMessage]);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setModalData(null);
+    
+    // Add cancellation message to chat
+    const cancelMessage: Message = {
+      id: generateMessageId(),
+      content: "No problem! Let me know if you'd like to create a different task or need help with anything else.",
+      sender: 'assistant',
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, cancelMessage]);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -172,112 +229,125 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 md:bottom-24 md:right-6 w-[calc(100vw-2rem)] md:w-96 h-[calc(100vh-2rem)] md:h-[500px] z-40 animate-slide-up">
-      <Card className="bg-swoon-white border border-swoon-mid-gray shadow-xl h-full flex flex-col">
-        {/* Header */}
-        <div className="bg-swoon-blue text-white p-4 rounded-t-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-swoon-white rounded-full flex items-center justify-center">
-                <span className="text-swoon-blue font-bold text-sm">S</span>
+    <>
+      <div className="fixed bottom-4 right-4 md:bottom-24 md:right-6 w-[calc(100vw-2rem)] md:w-96 h-[calc(100vh-2rem)] md:h-[500px] z-40 animate-slide-up">
+        <Card className="bg-swoon-white border border-swoon-mid-gray shadow-xl h-full flex flex-col">
+          {/* Header */}
+          <div className="bg-swoon-blue text-white p-4 rounded-t-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-swoon-white rounded-full flex items-center justify-center">
+                  <span className="text-swoon-blue font-bold text-sm">S</span>
+                </div>
+                <div>
+                  <h3 className="font-semibold">Swoon Assist</h3>
+                  <p className="text-xs opacity-90">Your AI study companion</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold">Swoon Assist</h3>
-                <p className="text-xs opacity-90">Your AI study companion</p>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="text-white hover:bg-swoon-bluer h-8 w-8 p-0"
-            >
-              ×
-            </Button>
-          </div>
-        </div>
-
-        {/* Messages */}
-        <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
-          <div className="space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex items-start space-x-3 ${
-                  message.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''
-                }`}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+                className="text-white hover:bg-swoon-bluer h-8 w-8 p-0"
               >
-                <div className={`
-                  w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0
-                  ${message.sender === 'user' 
-                    ? 'bg-swoon-yellow' 
-                    : 'bg-swoon-blue'
-                  }
-                `}>
-                  {message.sender === 'user' ? (
-                    <User className="w-4 h-4 text-swoon-black" />
-                  ) : (
-                    <Bot className="w-4 h-4 text-white" />
-                  )}
-                </div>
-                
-                <div className={`
-                  max-w-[80%] p-3 rounded-lg text-sm relative
-                  ${message.sender === 'user'
-                    ? 'bg-swoon-yellow text-swoon-black'
-                    : 'bg-swoon-light-blue text-swoon-black'
-                  }
-                `}>
-                  {message.content}
-                  {message.cardCreated && (
-                    <div className="flex items-center mt-2 text-swoon-blue">
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                      <span className="text-xs font-medium">Card created!</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-            
-            {/* Typing Indicator */}
-            {isTyping && (
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-swoon-blue rounded-full flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-white" />
-                </div>
-                <div className="bg-swoon-light-blue p-3 rounded-lg">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-swoon-dark-gray rounded-full animate-bounce" />
-                    <div className="w-2 h-2 bg-swoon-dark-gray rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                    <div className="w-2 h-2 bg-swoon-dark-gray rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                ×
+              </Button>
+            </div>
+          </div>
+
+          {/* Messages */}
+          <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+            <div className="space-y-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex items-start space-x-3 ${
+                    message.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+                  }`}
+                >
+                  <div className={`
+                    w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0
+                    ${message.sender === 'user' 
+                      ? 'bg-swoon-yellow' 
+                      : 'bg-swoon-blue'
+                    }
+                  `}>
+                    {message.sender === 'user' ? (
+                      <User className="w-4 h-4 text-swoon-black" />
+                    ) : (
+                      <Bot className="w-4 h-4 text-white" />
+                    )}
+                  </div>
+                  
+                  <div className={`
+                    max-w-[80%] p-3 rounded-lg text-sm relative
+                    ${message.sender === 'user'
+                      ? 'bg-swoon-yellow text-swoon-black'
+                      : 'bg-swoon-light-blue text-swoon-black'
+                    }
+                  `}>
+                    {message.content}
+                    {message.cardCreated && (
+                      <div className="flex items-center mt-2 text-swoon-blue">
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        <span className="text-xs font-medium">Card created!</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
+              ))}
+              
+              {/* Typing Indicator */}
+              {isTyping && (
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 bg-swoon-blue rounded-full flex items-center justify-center">
+                    <Bot className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="bg-swoon-light-blue p-3 rounded-lg">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-swoon-dark-gray rounded-full animate-bounce" />
+                      <div className="w-2 h-2 bg-swoon-dark-gray rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                      <div className="w-2 h-2 bg-swoon-dark-gray rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
 
-        {/* Input */}
-        <div className="p-4 border-t border-swoon-mid-gray">
-          <div className="flex space-x-2">
-            <Input
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Ask me anything about your assignments..."
-              className="flex-1 border-swoon-mid-gray focus:border-swoon-blue"
-            />
-            <Button
-              onClick={handleSendMessage}
-              className="bg-swoon-blue hover:bg-swoon-bluer"
-              size="icon"
-              disabled={!inputValue.trim() || isTyping}
-            >
-              <Send className="w-4 h-4" />
-            </Button>
+          {/* Input */}
+          <div className="p-4 border-t border-swoon-mid-gray">
+            <div className="flex space-x-2">
+              <Input
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Ask me anything about your assignments..."
+                className="flex-1 border-swoon-mid-gray focus:border-swoon-blue"
+              />
+              <Button
+                onClick={handleSendMessage}
+                className="bg-swoon-blue hover:bg-swoon-bluer"
+                size="icon"
+                disabled={!inputValue.trim() || isTyping}
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
-        </div>
-      </Card>
-    </div>
+        </Card>
+      </div>
+      
+      {/* Modal rendered outside the main card to ensure proper z-index */}
+      {modalData && (
+        <AddCardModal
+          isOpen={isModalOpen}
+          onClose={handleModalClose}
+          onSave={handleModalSave}
+          defaultColumn={modalData.subject}
+          prefilledData={modalData}
+        />
+      )}
+    </>
   );
 };

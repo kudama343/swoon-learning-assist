@@ -1,5 +1,6 @@
+// Updated AddCardModal.tsx - Add prefilledData prop
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,9 +22,15 @@ interface AddCardModalProps {
     type: string;
   }) => void;
   defaultColumn?: string;
+  prefilledData?: {
+    title: string;
+    subject: string;
+    dueDate: Date;
+    type: string;
+  };
 }
 
-export const AddCardModal = ({ isOpen, onClose, onSave, defaultColumn }: AddCardModalProps) => {
+export const AddCardModal = ({ isOpen, onClose, onSave, defaultColumn, prefilledData }: AddCardModalProps) => {
   const [title, setTitle] = useState('');
   const [selectedColumn, setSelectedColumn] = useState(defaultColumn || '');
   const [dueDate, setDueDate] = useState<Date>();
@@ -31,6 +38,22 @@ export const AddCardModal = ({ isOpen, onClose, onSave, defaultColumn }: AddCard
 
   const columns = ['Core Math', 'AP American Literature', 'AP Biology'];
   const cardTypes = ['Assignment', 'Quiz', 'Test', 'Project', 'Homework'];
+
+  // Effect to populate fields when prefilledData is provided
+  useEffect(() => {
+    if (prefilledData) {
+      setTitle(prefilledData.title);
+      setSelectedColumn(prefilledData.subject);
+      setDueDate(prefilledData.dueDate);
+      setType(prefilledData.type);
+    } else {
+      // Reset to defaults when no prefilled data
+      setTitle('');
+      setSelectedColumn(defaultColumn || '');
+      setDueDate(undefined);
+      setType('');
+    }
+  }, [prefilledData, defaultColumn]);
 
   const handleSave = () => {
     if (!title || !selectedColumn || !dueDate || !type) {
@@ -65,7 +88,9 @@ export const AddCardModal = ({ isOpen, onClose, onSave, defaultColumn }: AddCard
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Card</DialogTitle>
+          <DialogTitle>
+            {prefilledData ? 'Review and Confirm Task' : 'Add New Card'}
+          </DialogTitle>
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
@@ -147,7 +172,7 @@ export const AddCardModal = ({ isOpen, onClose, onSave, defaultColumn }: AddCard
             onClick={handleSave}
             disabled={!title || !selectedColumn || !dueDate || !type}
           >
-            Save
+            {prefilledData ? 'Confirm & Save' : 'Save'}
           </Button>
         </div>
       </DialogContent>
