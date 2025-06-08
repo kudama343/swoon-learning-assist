@@ -18,22 +18,35 @@ interface WorkboardState {
 }
 
 export const useWorkboard = () => {
+  const STORAGE_KEY = 'workboard_data';
   const [columnOrder, setColumnOrder] = useState<string[]>(['Core Math', 'AP American Literature', 'AP Biology']);
   
-  const [cards, setCards] = useState<WorkboardState>({
-    'Core Math': [      {
-        id: '1',
-        title: 'Quadratic Equations Practice',
-        type: 'Homework',
-        dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // Due in 2 days
-        subject: 'Core Math',
-        tags: ['Homework', 'Algebra'],
-      }
-    ],
+  const [cards, setCards] = useState<WorkboardState>(() => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Convert date strings back to Date objects
+      Object.keys(parsed).forEach(subject => {
+        parsed[subject] = parsed[subject].map((card: any) => ({
+          ...card,
+          dueDate: new Date(card.dueDate)
+        }));
+      });
+      return parsed;
+    }
+  } catch (error) {
+    console.error('Error loading workboard data:', error);
+  }
+  
+  // Default data if nothing in localStorage
+  return {
+    'Core Math': [],
     'AP American Literature': [],
     'AP Biology': []
-  });
-
+  };
+});
+ 
   const [highlightedCard, setHighlightedCard] = useState<string | null>(null);
 
   const [cerebrasService] = useState(() => new CerebrasService());
@@ -49,47 +62,63 @@ export const useWorkboard = () => {
   }, []);
 
   const addCard = useCallback((card: Omit<WorkboardCard, 'id'>) => {
-    console.log('Adding card:', card);
-    
-    const newCard: WorkboardCard = {
-      ...card,
-      id: Date.now().toString(),
-      isNewCard: true,
-      tags: [card.type, ...(card.tags || [])], // Add type to tags array
+  console.log('Adding card:', card);
+  
+  const newCard: WorkboardCard = {
+    ...card,
+    id: Date.now().toString(),
+    isNewCard: true,
+    tags: [card.type, ...(card.tags || [])],
+  };
+
+  console.log('New card created:', newCard);
+
+  setCards(prev => {
+    const updated = {
+      ...prev,
+      [card.subject]: [...(prev[card.subject] || []), newCard],
     };
+    console.log('Updated cards state:', updated);
+    
+    // Save to localStorage
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    } catch (error) {
+      console.error('Error saving to localStorage:', error);
+    }
+    
+    return updated;
+  });
 
-    console.log('New card created:', newCard);
+  // Move the column with the new card to the front
+  moveColumnToFront(card.subject);
 
+  // Set the highlighted card
+  setHighlightedCard(newCard.id);
+
+  // Auto-clear highlight after 5 seconds
+  setTimeout(() => {
+    console.log('Clearing highlight for card:', newCard.id);
+    setHighlightedCard(null);
     setCards(prev => {
-      const updated = {
-        ...prev,
-        [card.subject]: [...(prev[card.subject] || []), newCard],
-      };
-      console.log('Updated cards state:', updated);
+      const updated = { ...prev };
+      updated[card.subject] = updated[card.subject].map(c => 
+        c.id === newCard.id ? { ...c, isNewCard: false } : c
+      );
+      
+      // Save updated state to localStorage
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch (error) {
+        console.error('Error saving to localStorage:', error);
+      }
+      
       return updated;
     });
+  }, 5000);
 
-    // Move the column with the new card to the front
-    moveColumnToFront(card.subject);
-
-    // Set the highlighted card
-    setHighlightedCard(newCard.id);
-
-    // Auto-clear highlight after 5 seconds
-    setTimeout(() => {
-      console.log('Clearing highlight for card:', newCard.id);
-      setHighlightedCard(null);
-      setCards(prev => {
-        const updated = { ...prev };
-        updated[card.subject] = updated[card.subject].map(c => 
-          c.id === newCard.id ? { ...c, isNewCard: false } : c
-        );
-        return updated;
-      });
-    }, 5000);
-
-    return newCard;
-  }, [moveColumnToFront]);
+  return newCard;
+}, [moveColumnToFront]);
 
   const clearHighlight = useCallback(() => {
     setHighlightedCard(null);
@@ -130,20 +159,18 @@ export const useWorkboard = () => {
   }, [cerebrasService, cards]);
 
   const getDueSoon = useCallback(() => {
-    const today = new Date();
-    const threeDaysFromNow = new Date();
-    threeDaysFromNow.setDate(today.getDate() + 3);
+  const today = new Date();
+  const dueSoon: WorkboardCard[] = [];
+  
+  Object.values(cards).flat().forEach(card => {
+    dueSoon.push(card);
+  });
 
-    const dueSoon: WorkboardCard[] = [];
-    
-    Object.values(cards).flat().forEach(card => {
-      if (card.dueDate <= threeDaysFromNow) {
-        dueSoon.push(card);
-      }
-    });
-
-    return dueSoon.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
-  }, [cards]);
+  // Sort by due date (earliest first) and return only first 2
+  return dueSoon
+    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())
+    .slice(0, 2);
+}, [cards]);
 
   const getUrgentTasks = useCallback(() => {
     const tomorrow = new Date();

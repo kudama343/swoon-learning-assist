@@ -21,14 +21,16 @@ export const WelcomeModal = ({ onClose, priorityMode = false }: WelcomeModalProp
     setTimeout(onClose, 300);
   };
 
+  // Get earliest due cards (limited to 2)
   const dueSoon = getDueSoon();
   const urgentTasks = getUrgentTasks();
 
+  // Updated logic to show earliest 2 due cards
   const tasksToShow = priorityMode 
     ? [...urgentTasks, ...dueSoon]
         .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())
         .slice(0, 2)
-    : dueSoon.slice(0, 4);
+    : dueSoon; // getDueSoon already returns only 2 items
 
   const formatDueDate = (date: Date) => {
     if (isToday(date)) return 'today';
