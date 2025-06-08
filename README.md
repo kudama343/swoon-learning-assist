@@ -1,58 +1,56 @@
-<<<<<<< HEAD
-# React + TypeScript + Vite
+# Swoon Learning Assist
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Live Site: [https://swoon-learning-assist.vercel.app/](https://swoon-learning-assist.vercel.app/)
 
-Currently, two official plugins are available:
+Swoon Learning Assist is a modern, AI-powered assistant built to enhance the learning experience through intelligent interactions and contextual support. It leverages Cerebras LLM, advanced UI components, and prompt engineering to deliver a seamless conversational experience.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## 🧠 Features
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Natural language conversations powered by Cerebras LLM API
+- Context-aware prompts for intelligent assistant behavior
+- Real-time UI interactions with Radix UI and TailwindCSS
+- Responsive design with carousel support, tooltips, dialogs, and more
+- Tagging and workboard integration for enhanced task tracking
+- Built-in toast and notification system
+- Customizable theming with `next-themes`
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+---
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🚀 Tech Stack
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Core Technologies
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
-=======
-# swoon-learning-assist
->>>>>>> 11acc1585f683e36de74f88ca151cc1edc4f5fd4
+- **React + TypeScript** — For building scalable and maintainable UI components
+- **TailwindCSS** — For rapid and customizable styling
+- **Radix UI** — For accessible and unstyled headless UI primitives
+- **Lucide Icons & MUI Icons** — For beautiful, consistent iconography
+- **React Router DOM v7** — For managing client-side routes
+- **React Query (TanStack)** — For data fetching and caching
+- **Cerebras LLM API** — For natural language understanding and generation
+- **Advanced Prompt Engineering** — To structure contextually aware, domain-specific conversations
+- **date-fns** — For date formatting and validation
+- **React Context or Redux Toolkit** — For global state management
+- **Embla Carousel** — For swipeable, responsive carousels
+- **Form Handling** — Using `react-hook-form` for better UX
+
+---
+
+## 🧩 LLM Integration Architecture
+
+- **Cerebras API Integration**: API requests to the Cerebras LLM are handled efficiently, with comprehensive error handling and fallback strategies.
+- **Context Management**: Conversation history and user-specific state are preserved between prompts to maintain continuity.
+- **Prompt Templates**: Structured templates allow differentiated behaviors like task creation, feedback summarization, or lesson generation.
+- **Response Parsing**: The LLM’s JSON-like structured outputs are parsed into usable front-end objects (e.g., task cards, date ranges, etc.).
+
+---
+
+## 📦 Installation
+
+Clone the repository and install the dependencies:
+
+```bash
+git clone https://github.com/yourusername/swoon-learning-assist.git
+cd swoon-learning-assist
+npm install
